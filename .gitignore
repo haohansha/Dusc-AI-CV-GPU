@@ -1,0 +1,15 @@
+runs/
+models/*.pt
+data/smoke_dataset/train/
+data/smoke_dataset/valid/
+data/smoke_dataset/test/
+datasets/
+repos/
+yolo*.pt
+__pycache__/
+*.pyc
+.DS_Store
+venv/
+.env
+.ultralytics/
+Ultralytics/
