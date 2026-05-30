@@ -9,6 +9,10 @@ yolo*.pt
 __pycache__/
 *.pyc
 .DS_Store
+videos/
+data/factory_frames/
+data/factory_dataset/train/
+data/factory_dataset/val/
 venv/
 .env
 .ultralytics/
