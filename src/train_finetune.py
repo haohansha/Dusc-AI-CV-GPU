@@ -29,7 +29,9 @@ def main():
     models_dir = project_root / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
 
-    base_model = project_root / "models" / "smoke_detection_best.pt"
+    base_model = project_root / "models" / "factory_smoke_finetuned.pt"
+    if not base_model.exists():
+        base_model = project_root / "models" / "smoke_detection_best.pt"
     if not base_model.exists():
         print(f"Error: Base model not found: {base_model}")
         return
