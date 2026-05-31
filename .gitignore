@@ -13,6 +13,8 @@ videos/
 data/factory_frames/
 data/factory_dataset/train/
 data/factory_dataset/val/
+*.engine
+*.onnx
 venv/
 .env
 .ultralytics/
