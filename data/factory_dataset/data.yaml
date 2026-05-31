@@ -1,0 +1,7 @@
+path: e:/project/Dusc AI CV GPU/data/factory_dataset
+train: train/images
+val: val/images
+
+nc: 1
+names:
+  0: smoke
