@@ -1,9 +1,7 @@
 @echo off
-setlocal
-set "PROJECT_ROOT=%~dp0"
-set "VENV_PKGS=%PROJECT_ROOT%venv\Lib\site-packages"
-set "PYTHONPATH=%VENV_PKGS%;%PYTHONPATH%"
-set "YOLO_CONFIG_DIR=%PROJECT_ROOT%.ultralytics"
-mkdir "%YOLO_CONFIG_DIR%\Ultralytics" 2>nul
-"%LOCALAPPDATA%\..\Roaming\TRAE SOLO CN\ModularData\ai-agent\vm\tools\python\python.exe" %*
-endlocal
+chcp 65001 >nul
+cd /d "%~dp0"
+set "YOLO_CONFIG_DIR=%~dp0.ultralytics"
+if not exist "%YOLO_CONFIG_DIR%\Ultralytics" mkdir "%YOLO_CONFIG_DIR%\Ultralytics"
+"%LOCALAPPDATA%\..\Roaming\TRAE SOLO CN\ModularData\ai-agent\vm\tools\python\python.exe" -m app.demo
+pause

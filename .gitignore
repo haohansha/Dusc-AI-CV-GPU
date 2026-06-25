@@ -19,3 +19,9 @@ venv/
 .env
 .ultralytics/
 Ultralytics/
+*.mp4
+*.avi
+app_config.json
+dist/
+build/
+*.spec

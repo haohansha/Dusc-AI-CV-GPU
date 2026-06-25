@@ -9,3 +9,5 @@ pandas>=1.5.0
 pillow>=10.0.0
 tqdm>=4.65.0
 labelImg
+PyQt5>=5.15
+pyqtgraph>=0.13

@@ -6,26 +6,40 @@ venv_path = str(project_root / "venv" / "Lib" / "site-packages")
 if venv_path not in sys.path:
     sys.path.insert(0, venv_path)
 
-from ultralytics import YOLO
+from modules.export_engine import ExportConfig, ExportEngine
 
-model = YOLO(str(project_root / "models" / "factory_smoke_finetuned.pt"))
 
-model.export(
-    format="engine",
-    imgsz=640,
-    half=True,
-    device=0,
-    workspace=4,
-    simplify=True,
-)
+def main():
+    engine = ExportEngine(project_root)
 
-model.export(
-    format="onnx",
-    imgsz=640,
-    half=True,
-    simplify=True,
-)
+    model_path = str(project_root / "models" / "factory_smoke_finetuned.pt")
 
-print("Export complete:")
-print(f"  {project_root / 'models' / 'factory_smoke_finetuned.engine'}")
-print(f"  {project_root / 'models' / 'factory_smoke_finetuned.onnx'}")
+    engine.export_tensorrt(
+        model_path=model_path,
+        config=ExportConfig(
+            format="engine",
+            imgsz=640,
+            half=True,
+            device=0,
+            workspace=4,
+            simplify=True,
+            model_path=model_path,
+        ),
+    )
+
+    engine.export_onnx(
+        model_path=model_path,
+        config=ExportConfig(
+            format="onnx",
+            imgsz=640,
+            half=True,
+            simplify=True,
+            model_path=model_path,
+        ),
+    )
+
+    print("Export complete:")
+
+
+if __name__ == "__main__":
+    main()
