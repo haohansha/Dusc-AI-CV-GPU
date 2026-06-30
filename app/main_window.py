@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
         self._model_manager = ModelManager(self._project_root)
         self._dataset_manager = DatasetManager(self._project_root)
         self._inference_engine = InferenceEngine(self._project_root)
-        self._export_engine = ExportEngine(self._project_root)
+        self._export_engine = ExportEngine(self._project_root, app_config=self._config)
 
         self._model_manager.scan_models_dir()
 
@@ -126,7 +126,7 @@ class MainWindow(QMainWindow):
 
         self.tab_deploy = DeployPage(
             self._project_root, self._export_engine,
-            self._model_manager
+            self._model_manager, app_config=self._config
         )
         self._tab_widget.addTab(self.tab_deploy, "Jetson部署")
 

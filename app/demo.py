@@ -7,8 +7,8 @@ import sys
 import os
 from pathlib import Path
 
-# 必须在 PyQt5 之前 import torch（DLL 加载修复）
-import torch  # noqa: F401
+# 必须在 PyQt5 之前 import torch（DLL 加载修复）—— Demo 为纯UI，不依赖 torch
+# 若后续接回业务模块，请在 main.py 中恢复 import torch
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout,

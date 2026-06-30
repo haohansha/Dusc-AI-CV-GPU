@@ -1,0 +1,22 @@
+{
+  "default_model_dir": "models",
+  "default_data_dir": "data/media",
+  "default_output_dir": "runs",
+  "theme": "light",
+  "language": "zh_CN",
+  "last_model": "",
+  "window_geometry": "01d9d0cb00030000000005530000010900000a06000006e7000005550000014300000a04000006e500000000000000000f00000005550000014300000a04000006e5",
+  "jetson": {
+    "tensorrt_version": "10.3.0",
+    "ultralytics_version": "8.3.252",
+    "opencv_version": "4.11.0",
+    "imgsz": 640,
+    "half": true,
+    "device": 0,
+    "workspace": 4,
+    "precision": "FP16",
+    "camera_type": "csi",
+    "camera_index": 0,
+    "camera_pipeline": ""
+  }
+}

@@ -7,17 +7,34 @@ from modules.export_engine import ExportConfig
 
 
 class DeployPage(QWidget):
-    def __init__(self, project_root: Path, export_engine, model_manager):
+    def __init__(self, project_root: Path, export_engine, model_manager, app_config=None):
         super().__init__()
         self._project_root = Path(project_root)
         self._export_engine = export_engine
         self._model_manager = model_manager
+        self._app_config = app_config
+        # 从 AppConfig.jetson 读取 Nano 环境参数作为控件初始值
+        jetson = (app_config.get("jetson") if app_config else None) or {}
+        self._jetson_imgsz = jetson.get("imgsz", 640)
+        self._jetson_precision = jetson.get("precision", "FP16")
+        self._jetson_workspace = jetson.get("workspace", 4)
+        self._jetson_half = jetson.get("half", True)
+        self._jetson_info = (
+            f"目标 Nano 环境：TensorRT {jetson.get('tensorrt_version', '未知')} / "
+            f"Ultralytics {jetson.get('ultralytics_version', '未知')} / "
+            f"OpenCV {jetson.get('opencv_version', '未知')}"
+        ) if jetson else "目标 Nano 环境：未配置（使用默认值）"
         self._setup_ui()
         self._refresh_models()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
+
+        # 顶部 Nano 环境信息
+        env_label = QLabel(self._jetson_info)
+        env_label.setStyleSheet("QLabel { color: #0078d7; font-weight: bold; }")
+        layout.addWidget(env_label)
 
         layout.addWidget(self._create_model_selection())
         layout.addWidget(self._create_export_options())
@@ -64,16 +81,20 @@ class DeployPage(QWidget):
         self._imgsz_spin = QSpinBox()
         self._imgsz_spin.setRange(320, 1280)
         self._imgsz_spin.setSingleStep(32)
-        self._imgsz_spin.setValue(640)
+        self._imgsz_spin.setValue(self._jetson_imgsz)
         adv_layout.addRow("输入分辨率：", self._imgsz_spin)
 
         self._precision_combo = QComboBox()
         self._precision_combo.addItems(["FP16", "INT8"])
+        # 精度初始值取自 AppConfig.jetson
+        idx = self._precision_combo.findText(self._jetson_precision)
+        if idx >= 0:
+            self._precision_combo.setCurrentIndex(idx)
         adv_layout.addRow("精度：", self._precision_combo)
 
         self._workspace_spin = QSpinBox()
         self._workspace_spin.setRange(1, 16)
-        self._workspace_spin.setValue(4)
+        self._workspace_spin.setValue(self._jetson_workspace)
         adv_layout.addRow("Workspace (GB)：", self._workspace_spin)
 
         box_layout.addWidget(self._advanced_panel)
@@ -157,9 +178,10 @@ class DeployPage(QWidget):
         precision = self._precision_combo.currentText()
         return ExportConfig(
             imgsz=self._imgsz_spin.value(),
-            half=True,
+            half=self._jetson_half if precision == "FP16" else False,
             int8=(precision == "INT8"),
             workspace=self._workspace_spin.value(),
+            device=self._app_config.get("jetson", {}).get("device", 0) if self._app_config else 0,
         )
 
     def _on_toggle_advanced(self):

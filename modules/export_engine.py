@@ -19,11 +19,28 @@ class ExportConfig:
     device: int = 0
     model_path: str = ""
 
+    @classmethod
+    def from_app_config(cls, app_config=None) -> "ExportConfig":
+        """从 AppConfig.jetson 构造 ExportConfig；AppConfig 不可用时回退到硬编码默认值。"""
+        fallback = cls()  # 硬编码默认值 imgsz=640/half=True/device=0/workspace=4
+        if app_config is None:
+            return fallback
+        jetson = app_config.get("jetson")
+        if not jetson:
+            return fallback
+        return cls(
+            imgsz=jetson.get("imgsz", 640),
+            half=jetson.get("half", True),
+            device=jetson.get("device", 0),
+            workspace=jetson.get("workspace", 4),
+        )
+
 
 class ExportEngine:
 
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path, app_config=None):
         self.project_root = Path(project_root)
+        self._app_config = app_config  # 可能为 None，导出时会回退到硬编码默认值
 
     def export_tensorrt(
         self,
@@ -32,7 +49,7 @@ class ExportEngine:
         progress_callback: Optional[Callable[[int, str], None]] = None,
     ) -> Optional[Path]:
         if config is None:
-            config = ExportConfig()
+            config = ExportConfig.from_app_config(self._app_config)
 
         model_abs_path = str(self.project_root / model_path)
         model_stem = Path(model_abs_path).stem
@@ -73,7 +90,7 @@ class ExportEngine:
         progress_callback: Optional[Callable[[int, str], None]] = None,
     ) -> Optional[Path]:
         if config is None:
-            config = ExportConfig()
+            config = ExportConfig.from_app_config(self._app_config)
 
         model_abs_path = str(self.project_root / model_path)
         model_stem = Path(model_abs_path).stem

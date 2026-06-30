@@ -11,6 +11,19 @@ class AppConfig:
         "language": "zh_CN",
         "last_model": "",
         "window_geometry": "",
+        "jetson": {
+            "tensorrt_version": "10.3.0",
+            "ultralytics_version": "8.3.252",
+            "opencv_version": "4.11.0",
+            "imgsz": 640,
+            "half": True,
+            "device": 0,
+            "workspace": 4,
+            "precision": "FP16",
+            "camera_type": "csi",
+            "camera_index": 0,
+            "camera_pipeline": "",
+        },
     }
 
     def __init__(self, project_root):
