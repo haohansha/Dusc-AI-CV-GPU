@@ -1,0 +1,137 @@
+{
+  "data": [
+    {
+      "id": "page-data-management",
+      "title": "数据管理",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1782781800000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/data-management.html",
+        "interactions": [
+          {
+            "domId": "tab-model",
+            "targetPageId": "page-model-management",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-inference",
+            "targetPageId": "page-inference",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-jetson",
+            "targetPageId": "page-jetson-deploy",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-model-management",
+      "title": "模型管理",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1782781800000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/model-management.html",
+        "interactions": [
+          {
+            "domId": "tab-data",
+            "targetPageId": "page-data-management",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-inference",
+            "targetPageId": "page-inference",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-jetson",
+            "targetPageId": "page-jetson-deploy",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-inference",
+      "title": "推理检测",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1782781800000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/inference.html",
+        "interactions": [
+          {
+            "domId": "tab-data",
+            "targetPageId": "page-data-management",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-model",
+            "targetPageId": "page-model-management",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-jetson",
+            "targetPageId": "page-jetson-deploy",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-jetson-deploy",
+      "title": "Jetson部署",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1782781800000,
+      "canvasData": {
+        "x": 1860,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/jetson-deploy.html",
+        "interactions": [
+          {
+            "domId": "tab-data",
+            "targetPageId": "page-data-management",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-model",
+            "targetPageId": "page-model-management",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-inference",
+            "targetPageId": "page-inference",
+            "hideEdge": true
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "AI视觉检测平台"
+  }
+}

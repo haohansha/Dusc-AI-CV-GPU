@@ -1,0 +1,186 @@
+{
+  "project": {
+    "name": "AI视觉检测平台",
+    "path": "e:\\project\\Dusc AI CV GPU\\ai-detection-ui-design",
+    "operation": "create",
+    "deviceType": "desktop",
+    "language": "zh-CN",
+    "dashboardMode": false,
+    "replicationMode": null,
+    "sourceUrl": null,
+    "visualSpecExcerpt": null,
+    "styleDefinitionBrief": "Industrial AI detection platform, neutral gray background + forest green accent, Inter + Noto Sans SC, dense functional layout with tight spacing, restrained surfaces with border-first depth",
+    "designRead": "Desktop industrial tool / AI engineers & operators / calm professional utility / high density / avoid playful rounded shapes",
+    "designDials": {
+      "layoutVariance": 2,
+      "motionIntensity": 1,
+      "visualDensity": 5
+    },
+    "styleContinuityAnchors": {
+      "colorSystem": {
+        "primaryColorRole": "single forest-green hue for primary CTA and active states",
+        "brandHuePolicy": "no secondary/accent; categories use neutral tints",
+        "stateColors": "success/warning/error/info semantic tokens"
+      },
+      "shapeSystem": "tight radius (2-8px max), square inputs, minimal rounding",
+      "typographySystem": "Inter + Noto Sans SC, 13px body, monospace for data/logs",
+      "spacingSystem": "tight 4-16px grid, 12px content margins",
+      "componentLanguage": "border-first cards, minimal shadow, table-driven data",
+      "surfaceAndDepth": "border-only for static surfaces, shadow only for dropdowns/modals",
+      "imageryAndIconography": "minimal imagery, icon-first functional indicators",
+      "interactionTone": "functional feedback, no decorative animation"
+    },
+    "sharedProjectShellContract": {
+      "navigationShell": "top header bar with logo + menu items, tab bar below with 4 tabs (active tab has green accent strip), status bar at bottom with GPU info",
+      "primaryColorSystem": "forest green #1B5E3B for primary actions, active states, and selection indicators",
+      "typographySystem": "Inter 13px body, 15px headings, JetBrains Mono for log/code",
+      "radiusScale": "2px for controls, 6px for cards, 8px for panels",
+      "surfaceDepthModel": "1px border for cards/surfaces, no box-shadow on static elements",
+      "ctaStyle": "compact solid green buttons with 32px height, subtle hover state",
+      "alignmentRules": "tight 12px margins, 10px internal spacing, consistent toolbar heights"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell",
+        "kind": "project-shell",
+        "pageIds": ["page-data-management", "page-model-management", "page-inference", "page-jetson-deploy"],
+        "output": "partials/project-shell.html",
+        "sharedRegions": ["header-bar", "tab-navigation", "status-bar", "app-frame"],
+        "privateRegions": [],
+        "mutableSlots": ["activeTab", "pageContent", "pageTitle"],
+        "status": "planned",
+        "children": [
+          {
+            "nodeId": "gen-page-data-management",
+            "kind": "page-leaf",
+            "pageIds": ["page-data-management"],
+            "output": "pages/data-management.html",
+            "sharedRegions": [],
+            "privateRegions": ["three-column-data-panel", "action-toolbar"],
+            "mutableSlots": ["activeTab"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-model-management",
+            "kind": "page-leaf",
+            "pageIds": ["page-model-management"],
+            "output": "pages/model-management.html",
+            "sharedRegions": [],
+            "privateRegions": ["model-table", "model-details", "training-panel"],
+            "mutableSlots": ["activeTab"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-inference",
+            "kind": "page-leaf",
+            "pageIds": ["page-inference"],
+            "output": "pages/inference.html",
+            "sharedRegions": [],
+            "privateRegions": ["config-sidebar", "preview-area", "results-table"],
+            "mutableSlots": ["activeTab"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-jetson-deploy",
+            "kind": "page-leaf",
+            "pageIds": ["page-jetson-deploy"],
+            "output": "pages/jetson-deploy.html",
+            "sharedRegions": [],
+            "privateRegions": ["deploy-options", "deploy-instructions", "verify-panel"],
+            "mutableSlots": ["activeTab"],
+            "status": "planned",
+            "children": []
+          }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "libraryIdentity": null,
+    "libraryPath": null,
+    "cssFilePath": "e:\\project\\Dusc AI CV GPU\\ai-detection-ui-design\\colors_and_type.css",
+    "brandPrefix": "",
+    "themeMode": "light",
+    "designDecisionSummary": "Industrial tool aesthetic with forest green accent, tight dense layout, border-first surfaces",
+    "componentContractKind": "undefined",
+    "forbiddenInventedComponents": [],
+    "allowedComponents": ["table", "button", "input", "select", "slider", "progress-bar", "panel", "toolbar", "tab-bar", "status-bar", "log-panel"],
+    "styleConstraints": {
+      "radiusMax": 8,
+      "spacingBase": 4,
+      "fontSizeBody": 13,
+      "fontSizeMin": 11,
+      "controlHeightDefault": 32,
+      "controlHeightLarge": 36
+    },
+    "productContext": {
+      "kitType": "custom",
+      "productType": "Desktop industrial AI detection software"
+    }
+  },
+  "pages": [
+    {
+      "nodeId": "page-data-management",
+      "slug": "data-management",
+      "title": "数据管理",
+      "htmlSrc": "pages/data-management.html",
+      "pageIndex": 1,
+      "pageType": "task-driven",
+      "businessScenario": "Import video/image assets, preview with annotation overlay, manage YOLO-format labels",
+      "visualNorthStar": "Three-column functional layout: asset list | media preview with detection boxes | label manager",
+      "continuityAnchors": ["header-tab-status shell", "toolbar-button treatment", "card-border-depth"]
+    },
+    {
+      "nodeId": "page-model-management",
+      "slug": "model-management",
+      "title": "模型管理",
+      "htmlSrc": "pages/model-management.html",
+      "pageIndex": 2,
+      "pageType": "information-dense",
+      "businessScenario": "List/manage models, view details, configure and run fine-tuning training",
+      "visualNorthStar": "Upper model table + details panel, lower collapsible training configuration with progress log",
+      "continuityAnchors": ["header-tab-status shell", "toolbar-button treatment", "card-border-depth"]
+    },
+    {
+      "nodeId": "page-inference",
+      "slug": "inference",
+      "title": "推理检测",
+      "htmlSrc": "pages/inference.html",
+      "pageIndex": 3,
+      "pageType": "task-driven",
+      "businessScenario": "Configure inference settings, run detection on image/video/camera, view results table",
+      "visualNorthStar": "Left config sidebar with model/source/params, right side split between preview canvas and results table",
+      "continuityAnchors": ["header-tab-status shell", "toolbar-button treatment", "card-border-depth"]
+    },
+    {
+      "nodeId": "page-jetson-deploy",
+      "slug": "jetson-deploy",
+      "title": "Jetson部署",
+      "htmlSrc": "pages/jetson-deploy.html",
+      "pageIndex": 4,
+      "pageType": "task-driven",
+      "businessScenario": "Select model, configure export options, generate TensorRT/ONNX deployment package",
+      "visualNorthStar": "Clean vertical flow: action toolbar > model selector > collapsible advanced options > deployment guide > verify section",
+      "continuityAnchors": ["header-tab-status shell", "toolbar-button treatment", "card-border-depth"]
+    }
+  ],
+  "assets": [],
+  "wiringPlan": [
+    {"from": "page-data-management", "domId": "tab-model", "to": "page-model-management", "hideEdge": true},
+    {"from": "page-data-management", "domId": "tab-inference", "to": "page-inference", "hideEdge": true},
+    {"from": "page-data-management", "domId": "tab-jetson", "to": "page-jetson-deploy", "hideEdge": true},
+    {"from": "page-model-management", "domId": "tab-data", "to": "page-data-management", "hideEdge": true},
+    {"from": "page-model-management", "domId": "tab-inference", "to": "page-inference", "hideEdge": true},
+    {"from": "page-model-management", "domId": "tab-jetson", "to": "page-jetson-deploy", "hideEdge": true},
+    {"from": "page-inference", "domId": "tab-data", "to": "page-data-management", "hideEdge": true},
+    {"from": "page-inference", "domId": "tab-model", "to": "page-model-management", "hideEdge": true},
+    {"from": "page-inference", "domId": "tab-jetson", "to": "page-jetson-deploy", "hideEdge": true},
+    {"from": "page-jetson-deploy", "domId": "tab-data", "to": "page-data-management", "hideEdge": true},
+    {"from": "page-jetson-deploy", "domId": "tab-model", "to": "page-model-management", "hideEdge": true},
+    {"from": "page-jetson-deploy", "domId": "tab-inference", "to": "page-inference", "hideEdge": true}
+  ]
+}

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推理检测 - Dusc AI</title>
+    <style id="theme-vars">
+/* Dusc AI - Industrial Detection Platform Brand CSS */
+/* Design System: Industrial/Utilitarian | High-density functional tool */
+
+:root {
+  /* === Brand Color System === */
+  --color-primary: #1B5E3B;
+  --color-primary-hover: #15713A;
+  --color-primary-active: #0F5A2E;
+  --color-primary-light: #E8F5EE;
+  --color-primary-subtle: #D1EBD9;
+
+  --color-bg-base: #F5F6F8;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-sunken: #EDF0F3;
+  --color-bg-hover: #F0F2F5;
+  --color-bg-active: #E8EAED;
+
+  --color-text-primary: #1A1D21;
+  --color-text-secondary: #5F6368;
+  --color-text-tertiary: #8C9197;
+  --color-text-inverse: #FFFFFF;
+  --color-text-link: #1B5E3B;
+
+  --color-border-default: #D5D8DC;
+  --color-border-strong: #B0B5BB;
+  --color-border-focus: #1B5E3B;
+
+  /* === Semantic State Colors === */
+  --state-success: #1B7A3D;
+  --state-success-bg: #E8F5EE;
+  --state-warning: #C4700A;
+  --state-warning-bg: #FEF4E6;
+  --state-error: #C53030;
+  --state-error-bg: #FEF0F0;
+  --state-info: #2B6CB0;
+  --state-info-bg: #EBF4FF;
+
+  /* === Typography System === */
+  --font-family-display: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-body: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  --font-size-display: 20px;
+  --font-size-display-weight: 600;
+  --font-size-heading: 15px;
+  --font-size-heading-weight: 600;
+  --font-size-body: 13px;
+  --font-size-body-weight: 400;
+  --font-size-caption: 12px;
+  --font-size-caption-weight: 400;
+  --font-size-small: 11px;
+  --font-size-small-weight: 400;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+
+  /* === Spacing System === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  --content-padding: 16px;
+  --content-margin: 12px;
+
+  /* === Radius System === */
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* === Shadow / Depth System === */
+  --shadow-sunken: inset 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card: 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-dropdown: 0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
+
+  /* === Component Tokens === */
+  --control-height: 32px;
+  --control-height-sm: 28px;
+  --control-height-lg: 36px;
+  --control-radius: var(--radius-sm);
+  --control-padding-h: 10px;
+
+  --tab-height: 36px;
+  --toolbar-height: 44px;
+  --sidebar-width: 220px;
+  --header-height: 52px;
+  --statusbar-height: 28px;
+
+  /* === Accent Markers === */
+  --accent-strip: 3px;
+  --focus-ring: 0 0 0 2px rgba(27, 94, 59, 0.3);
+}
+
+/* === Utility Classes === */
+.text-display { font-size: var(--font-size-display); font-weight: var(--font-size-display-weight); line-height: var(--line-height-tight); }
+.text-heading { font-size: var(--font-size-heading); font-weight: var(--font-size-heading-weight); line-height: var(--line-height-tight); }
+.text-body { font-size: var(--font-size-body); font-weight: var(--font-size-body-weight); line-height: var(--line-height-normal); }
+.text-caption { font-size: var(--font-size-caption); font-weight: var(--font-size-caption-weight); line-height: var(--line-height-normal); }
+.text-small { font-size: var(--font-size-small); font-weight: var(--font-size-small-weight); line-height: var(--line-height-normal); }
+.text-mono { font-family: var(--font-family-mono); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+
+.surface-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+}
+.surface-elevated {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-primary: var(--color-primary);
+  }
+  @layer base {
+    body { background: var(--color-bg-base); color: var(--color-text-primary); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body style="margin:0; padding:0; font-family:'Inter','Noto Sans SC',sans-serif; font-size:13px; color:#1A1D21; background:#F5F6F8;">
+
+<!-- Project Shell -->
+<div style="display:flex; flex-direction:column; height:100vh; font-family:'Inter','Noto Sans SC',sans-serif; font-size:13px; color:#1A1D21; background:#F5F6F8;">
+
+  <!-- ========== Header Bar ========== -->
+  <header style="display:flex; align-items:center; justify-content:space-between; height:52px; min-height:52px; padding:0 14px; background:#FFFFFF; border-bottom:1px solid #D5D8DC; z-index:100; user-select:none;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="20" height="20" rx="4" fill="#1B5E3B"/>
+        <path d="M7 11.5L9.5 14L15 8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span style="font-size:15px; font-weight:600; color:#1A1D21; letter-spacing:-0.3px;">Dusc AI</span>
+    </div>
+    <nav style="display:flex; align-items:center; gap:4px;">
+      <a href="#" style="padding:5px 10px; font-size:13px; color:#5F6368; text-decoration:none; border-radius:3px; transition:background .15s;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px; margin-right:4px;"><path d="M2 3h10M2 7h10M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>文件
+      </a>
+      <a href="#" style="padding:5px 10px; font-size:13px; color:#5F6368; text-decoration:none; border-radius:3px; transition:background .15s;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px; margin-right:4px;"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 2v2M7 10v2M2 7h2M10 7h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>设置
+      </a>
+      <a href="#" style="padding:5px 10px; font-size:13px; color:#5F6368; text-decoration:none; border-radius:3px; transition:background .15s;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px; margin-right:4px;"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>帮助
+      </a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:7px;">
+      <span style="width:12px; height:12px; border-radius:50%; background:#F5C542; cursor:pointer; display:inline-block;" title="最小化"></span>
+      <span style="width:12px; height:12px; border-radius:50%; background:#4CD964; cursor:pointer; display:inline-block;" title="最大化"></span>
+      <span style="width:12px; height:12px; border-radius:50%; background:#FF6058; cursor:pointer; display:inline-block;" title="关闭"></span>
+    </div>
+  </header>
+
+  <!-- ========== Tab Navigation Bar ========== -->
+  <nav style="display:flex; align-items:stretch; height:36px; min-height:36px; background:#FFFFFF; border-bottom:1px solid #D5D8DC; padding:0 14px; gap:0; user-select:none;">
+    <a href="#" data-tab-key="data" data-active="false" data-dom-id="tab-data"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; color:#5F6368; text-decoration:none; border-bottom:3px solid transparent; transition:all .15s; cursor:pointer;">
+      数据管理
+    </a>
+    <a href="#" data-tab-key="model" data-active="false" data-dom-id="tab-model"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; color:#5F6368; text-decoration:none; border-bottom:3px solid transparent; transition:all .15s; cursor:pointer;">
+      模型管理
+    </a>
+    <a href="#" data-tab-key="inference" data-active="true"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; color:#1A1D21; font-weight:600; text-decoration:none; border-bottom:3px solid #1B5E3B; transition:all .15s; cursor:pointer;">
+      推理检测
+    </a>
+    <a href="#" data-tab-key="jetson" data-active="false" data-dom-id="tab-jetson"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; color:#5F6368; text-decoration:none; border-bottom:3px solid transparent; transition:all .15s; cursor:pointer;">
+      Jetson部署
+    </a>
+  </nav>
+
+  <!-- ========== Main Content Area ========== -->
+  <main style="flex:1; overflow:auto; padding:12px; background:#F5F6F8;">
+
+    <!-- PAGE CONTENT: Two-column layout (3:7) -->
+    <div style="display:flex; gap:12px; height:100%;">
+
+      <!-- ===== LEFT COLUMN (30%) - 配置面板 ===== -->
+      <div style="width:30%; min-width:260px; flex-shrink:0;">
+        <div style="background:#FFFFFF; border:1px solid #D5D8DC; border-radius:8px; padding:16px; height:100%; display:flex; flex-direction:column;">
+
+          <!-- Section 1: 模型选择 -->
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:12px; font-weight:600; color:#5F6368; margin-bottom:8px;">模型选择</label>
+            <select style="width:100%; height:32px; padding:0 10px; font-size:13px; font-family:'Inter','Noto Sans SC',sans-serif; color:#1A1D21; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; appearance:auto; cursor:pointer;">
+              <option selected>smoke_best.pt</option>
+            </select>
+          </div>
+
+          <!-- Divider -->
+          <div style="height:1px; background:#D5D8DC; margin-bottom:16px;"></div>
+
+          <!-- Section 2: 输入源 -->
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:12px; font-weight:600; color:#5F6368; margin-bottom:8px;">输入源</label>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#1A1D21; cursor:pointer;">
+                <span style="width:14px; height:14px; border-radius:50%; border:2px solid #D5D8DC; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"></span>
+                图片
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#1A1D21; cursor:pointer;">
+                <span style="width:14px; height:14px; border-radius:50%; border:2px solid #1B5E3B; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                  <span style="width:6px; height:6px; border-radius:50%; background:#1B5E3B;"></span>
+                </span>
+                视频
+              </label>
+              <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#1A1D21; cursor:pointer;">
+                <span style="width:14px; height:14px; border-radius:50%; border:2px solid #D5D8DC; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"></span>
+                摄像头
+              </label>
+            </div>
+            <select style="width:100%; height:32px; padding:0 10px; font-size:13px; font-family:'Inter','Noto Sans SC',sans-serif; color:#1A1D21; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; appearance:auto; cursor:pointer; margin-bottom:8px;">
+              <option selected>素材列表</option>
+            </select>
+            <button style="width:100%; height:32px; font-size:13px; font-family:'Inter','Noto Sans SC',sans-serif; color:#5F6368; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; cursor:pointer; transition:background .15s;">
+              浏览文件...
+            </button>
+          </div>
+
+          <!-- Divider -->
+          <div style="height:1px; background:#D5D8DC; margin-bottom:16px;"></div>
+
+          <!-- Section 3: 参数 -->
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:12px; font-weight:600; color:#5F6368; margin-bottom:8px;">参数</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:13px; color:#1A1D21; white-space:nowrap;">置信度:</span>
+              <div style="flex:1; position:relative; height:20px; display:flex; align-items:center;">
+                <input type="range" min="0" max="1" step="0.01" value="0.25"
+                  style="width:100%; height:4px; appearance:none; -webkit-appearance:none; background:linear-gradient(to right, #1B5E3B 25%, #EDF0F3 25%); border-radius:2px; outline:none; cursor:pointer;">
+                <style>
+                  input[type="range"]::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 14px; height: 14px;
+                    border-radius: 50%;
+                    background: #FFFFFF;
+                    border: 2px solid #1B5E3B;
+                    box-shadow: 0 0 0 2px rgba(27,94,59,0.15);
+                    cursor: pointer;
+                    margin-top: -5px;
+                  }
+                  input[type="range"]::-moz-range-thumb {
+                    width: 14px; height: 14px;
+                    border-radius: 50%;
+                    background: #FFFFFF;
+                    border: 2px solid #1B5E3B;
+                    box-shadow: 0 0 0 2px rgba(27,94,59,0.15);
+                    cursor: pointer;
+                  }
+                </style>
+              </div>
+              <span style="font-size:12px; color:#1A1D21; background:#EDF0F3; border-radius:2px; padding:2px 8px; min-width:36px; text-align:center;">0.25</span>
+            </div>
+          </div>
+
+          <!-- Spacer -->
+          <div style="flex:1;"></div>
+
+          <!-- Divider -->
+          <div style="height:1px; background:#D5D8DC; margin-bottom:16px;"></div>
+
+          <!-- Section 4: 控制 -->
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button style="width:100%; height:36px; font-size:13px; font-weight:500; font-family:'Inter','Noto Sans SC',sans-serif; color:#FFFFFF; background:#1B5E3B; border:1px solid #1B5E3B; border-radius:2px; cursor:pointer; transition:background .15s;">
+              开始检测
+            </button>
+            <button style="width:100%; height:36px; font-size:13px; font-weight:500; font-family:'Inter','Noto Sans SC',sans-serif; color:#5F6368; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; cursor:pointer; transition:background .15s;">
+              停止检测
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== RIGHT COLUMN (70%) - 预览与结果 ===== -->
+      <div style="width:70%; flex-shrink:0; display:flex; flex-direction:column; gap:12px;">
+
+        <!-- Top: 检测画面 (60% height) -->
+        <div style="background:#FFFFFF; border:1px solid #D5D8DC; border-radius:8px; padding:12px; flex:6; display:flex; flex-direction:column; min-height:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <span style="font-size:15px; font-weight:600; color:#1A1D21;">检测画面</span>
+          </div>
+          <!-- Preview Area -->
+          <div style="flex:1; min-height:350px; position:relative; background:#1A1D21; border-radius:6px; overflow:hidden;">
+            <!-- Placeholder industrial scene background -->
+            <svg width="100%" height="100%" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+              <!-- Dark industrial background -->
+              <rect width="800" height="450" fill="#2D3035"/>
+              <!-- Factory structure -->
+              <rect x="50" y="200" width="700" height="250" fill="#3A3D42" rx="2"/>
+              <rect x="100" y="150" width="600" height="50" fill="#44474C" rx="2"/>
+              <!-- Chimneys -->
+              <rect x="180" y="60" width="30" height="100" fill="#4A4D52"/>
+              <rect x="550" y="80" width="25" height="80" fill="#4A4D52"/>
+              <!-- Smoke wisps -->
+              <ellipse cx="195" cy="50" rx="40" ry="20" fill="rgba(160,165,170,0.3)"/>
+              <ellipse cx="210" cy="35" rx="30" ry="15" fill="rgba(160,165,170,0.2)"/>
+              <ellipse cx="562" cy="70" rx="35" ry="18" fill="rgba(160,165,170,0.3)"/>
+              <!-- Windows -->
+              <rect x="140" y="220" width="40" height="35" fill="#5A6068" rx="1"/>
+              <rect x="200" y="220" width="40" height="35" fill="#5A6068" rx="1"/>
+              <rect x="260" y="220" width="40" height="35" fill="#5A6068" rx="1"/>
+              <rect x="360" y="220" width="40" height="35" fill="#5A6068" rx="1"/>
+              <rect x="420" y="220" width="40" height="35" fill="#5A6068" rx="1"/>
+              <rect x="480" y="220" width="40" height="35" fill="#5A6068" rx="1"/>
+              <!-- Ground -->
+              <rect x="0" y="420" width="800" height="30" fill="#22252A"/>
+              <!-- Pipes -->
+              <line x1="0" y1="280" x2="100" y2="280" stroke="#55585D" stroke-width="8"/>
+              <line x1="0" y1="300" x2="80" y2="300" stroke="#55585D" stroke-width="6"/>
+              <line x1="700" y1="260" x2="800" y2="260" stroke="#55585D" stroke-width="8"/>
+            </svg>
+
+            <!-- Detection Box 1: smoke 85.2% (upper-left area) -->
+            <div style="position:absolute; top:60px; left:100px; width:200px; height:160px; border:2px solid #1B5E3B; box-sizing:border-box;">
+              <span style="position:absolute; top:-22px; left:-2px; background:#1B5E3B; color:#FFFFFF; font-size:11px; padding:1px 6px; border-radius:0 2px 0 2px; white-space:nowrap; font-family:'Inter','Noto Sans SC',sans-serif;">smoke 85.2%</span>
+            </div>
+
+            <!-- Detection Box 2: smoke 72.1% (lower-right area) -->
+            <div style="position:absolute; top:200px; left:400px; width:240px; height:140px; border:2px solid #1B5E3B; box-sizing:border-box;">
+              <span style="position:absolute; top:-22px; left:-2px; background:#1B5E3B; color:#FFFFFF; font-size:11px; padding:1px 6px; border-radius:0 2px 0 2px; white-space:nowrap; font-family:'Inter','Noto Sans SC',sans-serif;">smoke 72.1%</span>
+            </div>
+          </div>
+          <!-- Status text below preview -->
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; font-size:12px; color:#5F6368;">
+            <span>smoke_01.jpg | 1920x1080</span>
+            <span style="color:#1B5E3B; font-weight:500;">检测中...</span>
+          </div>
+        </div>
+
+        <!-- Bottom: 检测结果 (40% height) -->
+        <div style="background:#FFFFFF; border:1px solid #D5D8DC; border-radius:8px; padding:12px; flex:4; display:flex; flex-direction:column; min-height:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <span style="font-size:15px; font-weight:600; color:#1A1D21;">检测结果</span>
+          </div>
+          <!-- Table -->
+          <div style="flex:1; overflow:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px; font-family:'Inter','Noto Sans SC',sans-serif;">
+              <thead>
+                <tr style="background:#EDF0F3;">
+                  <th style="text-align:left; padding:8px 12px; font-size:12px; font-weight:600; color:#5F6368; border-bottom:1px solid #D5D8DC;">类别</th>
+                  <th style="text-align:left; padding:8px 12px; font-size:12px; font-weight:600; color:#5F6368; border-bottom:1px solid #D5D8DC;">置信度</th>
+                  <th style="text-align:left; padding:8px 12px; font-size:12px; font-weight:600; color:#5F6368; border-bottom:1px solid #D5D8DC;">位置</th>
+                  <th style="text-align:left; padding:8px 12px; font-size:12px; font-weight:600; color:#5F6368; border-bottom:1px solid #D5D8DC;">面积占比</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding:8px 12px; color:#1A1D21; border-bottom:1px solid #EDF0F3;">smoke</td>
+                  <td style="padding:8px 12px; color:#1B5E3B; font-weight:500; border-bottom:1px solid #EDF0F3;">85.2%</td>
+                  <td style="padding:8px 12px; color:#5F6368; font-family:'JetBrains Mono','Fira Code','Consolas',monospace; font-size:12px; border-bottom:1px solid #EDF0F3;">(120, 80, 300, 280)</td>
+                  <td style="padding:8px 12px; color:#1A1D21; border-bottom:1px solid #EDF0F3;">12.5%</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 12px; color:#1A1D21;">smoke</td>
+                  <td style="padding:8px 12px; color:#1B5E3B; font-weight:500;">72.1%</td>
+                  <td style="padding:8px 12px; color:#5F6368; font-family:'JetBrains Mono','Fira Code','Consolas',monospace; font-size:12px;">(400, 50, 550, 200)</td>
+                  <td style="padding:8px 12px; color:#1A1D21;">8.3%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Stats bar -->
+          <div style="margin-top:10px; display:flex; align-items:center; gap:16px; background:#EDF0F3; border-radius:4px; padding:6px 12px; font-size:12px; color:#5F6368;">
+            <span>总帧数: 1</span>
+            <span>FPS: 45.2</span>
+            <span>检测数: 2</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========== Status Bar ========== -->
+  <footer style="display:flex; align-items:center; justify-content:space-between; height:28px; min-height:28px; padding:0 14px; background:#FFFFFF; border-top:1px solid #D5D8DC; font-size:11px; color:#8C9197; user-select:none; z-index:100;">
+    <div style="display:flex; align-items:center; gap:5px;">
+      <svg width="8" height="8" viewBox="0 0 8 8">
+        <circle cx="4" cy="4" r="3.5" fill="#1B5E3B"/>
+      </svg>
+      <span>检测就绪</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:5px;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="1.5" y="3" width="11" height="8" rx="1.5" stroke="#8C9197" stroke-width="1.2"/>
+        <rect x="4" y="5" width="6" height="4" rx="0.5" stroke="#8C9197" stroke-width="0.8"/>
+        <line x1="3" y1="7" x2="4" y2="7" stroke="#8C9197" stroke-width="1"/>
+        <line x1="10" y1="7" x2="11" y2="7" stroke="#8C9197" stroke-width="1"/>
+        <line x1="5.5" y1="3" x2="5.5" y2="1.5" stroke="#8C9197" stroke-width="0.8"/>
+        <line x1="8.5" y1="3" x2="8.5" y2="1.5" stroke="#8C9197" stroke-width="0.8"/>
+      </svg>
+      <span>GPU: NVIDIA RTX 3060 (12.0 GB)</span>
+    </div>
+    <div>
+      <span>00:00:00</span>
+    </div>
+  </footer>
+
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

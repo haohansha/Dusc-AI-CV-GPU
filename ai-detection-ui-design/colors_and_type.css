@@ -1,0 +1,118 @@
+/* Dusc AI - Industrial Detection Platform Brand CSS */
+/* Design System: Industrial/Utilitarian | High-density functional tool */
+
+:root {
+  /* === Brand Color System === */
+  --color-primary: #1B5E3B;
+  --color-primary-hover: #15713A;
+  --color-primary-active: #0F5A2E;
+  --color-primary-light: #E8F5EE;
+  --color-primary-subtle: #D1EBD9;
+
+  --color-bg-base: #F5F6F8;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-sunken: #EDF0F3;
+  --color-bg-hover: #F0F2F5;
+  --color-bg-active: #E8EAED;
+
+  --color-text-primary: #1A1D21;
+  --color-text-secondary: #5F6368;
+  --color-text-tertiary: #8C9197;
+  --color-text-inverse: #FFFFFF;
+  --color-text-link: #1B5E3B;
+
+  --color-border-default: #D5D8DC;
+  --color-border-strong: #B0B5BB;
+  --color-border-focus: #1B5E3B;
+
+  /* === Semantic State Colors === */
+  --state-success: #1B7A3D;
+  --state-success-bg: #E8F5EE;
+  --state-warning: #C4700A;
+  --state-warning-bg: #FEF4E6;
+  --state-error: #C53030;
+  --state-error-bg: #FEF0F0;
+  --state-info: #2B6CB0;
+  --state-info-bg: #EBF4FF;
+
+  /* === Typography System === */
+  --font-family-display: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-body: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  --font-size-display: 20px;
+  --font-size-display-weight: 600;
+  --font-size-heading: 15px;
+  --font-size-heading-weight: 600;
+  --font-size-body: 13px;
+  --font-size-body-weight: 400;
+  --font-size-caption: 12px;
+  --font-size-caption-weight: 400;
+  --font-size-small: 11px;
+  --font-size-small-weight: 400;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+
+  /* === Spacing System === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  --content-padding: 16px;
+  --content-margin: 12px;
+
+  /* === Radius System === */
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* === Shadow / Depth System === */
+  --shadow-sunken: inset 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card: 0 0 0 1px rgba(0,0,0,0.05);
+  --shadow-dropdown: 0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
+
+  /* === Component Tokens === */
+  --control-height: 32px;
+  --control-height-sm: 28px;
+  --control-height-lg: 36px;
+  --control-radius: var(--radius-sm);
+  --control-padding-h: 10px;
+
+  --tab-height: 36px;
+  --toolbar-height: 44px;
+  --sidebar-width: 220px;
+  --header-height: 52px;
+  --statusbar-height: 28px;
+
+  /* === Focus Ring === */
+  --focus-ring: 0 0 0 2px rgba(27, 94, 59, 0.3);
+}
+
+/* === Utility Classes === */
+.text-display { font-size: var(--font-size-display); font-weight: var(--font-size-display-weight); line-height: var(--line-height-tight); }
+.text-heading { font-size: var(--font-size-heading); font-weight: var(--font-size-heading-weight); line-height: var(--line-height-tight); }
+.text-body { font-size: var(--font-size-body); font-weight: var(--font-size-body-weight); line-height: var(--line-height-normal); }
+.text-caption { font-size: var(--font-size-caption); font-weight: var(--font-size-caption-weight); line-height: var(--line-height-normal); }
+.text-small { font-size: var(--font-size-small); font-weight: var(--font-size-small-weight); line-height: var(--line-height-normal); }
+.text-mono { font-family: var(--font-family-mono); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+
+.surface-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+}
+.surface-elevated {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+}

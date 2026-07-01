@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jetson部署 - Dusc AI</title>
+    <style id="theme-vars">
+/* Dusc AI - Industrial Detection Platform Brand CSS */
+/* Design System: Industrial/Utilitarian | High-density functional tool */
+
+:root {
+  /* === Brand Color System === */
+  --color-primary: #1B5E3B;
+  --color-primary-hover: #15713A;
+  --color-primary-active: #0F5A2E;
+  --color-primary-light: #E8F5EE;
+  --color-primary-subtle: #D1EBD9;
+
+  --color-bg-base: #F5F6F8;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-sunken: #EDF0F3;
+  --color-bg-hover: #F0F2F5;
+  --color-bg-active: #E8EAED;
+
+  --color-text-primary: #1A1D21;
+  --color-text-secondary: #5F6368;
+  --color-text-tertiary: #8C9197;
+  --color-text-inverse: #FFFFFF;
+  --color-text-link: #1B5E3B;
+
+  --color-border-default: #D5D8DC;
+  --color-border-strong: #B0B5BB;
+  --color-border-focus: #1B5E3B;
+
+  /* === Semantic State Colors === */
+  --state-success: #1B7A3D;
+  --state-success-bg: #E8F5EE;
+  --state-warning: #C4700A;
+  --state-warning-bg: #FEF4E6;
+  --state-error: #C53030;
+  --state-error-bg: #FEF0F0;
+  --state-info: #2B6CB0;
+  --state-info-bg: #EBF4FF;
+
+  /* === Typography System === */
+  --font-family-display: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-body: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  --font-size-display: 20px;
+  --font-size-display-weight: 600;
+  --font-size-heading: 15px;
+  --font-size-heading-weight: 600;
+  --font-size-body: 13px;
+  --font-size-body-weight: 400;
+  --font-size-caption: 12px;
+  --font-size-caption-weight: 400;
+  --font-size-small: 11px;
+  --font-size-small-weight: 400;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+
+  /* === Spacing System === */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  --content-padding: 16px;
+  --content-margin: 12px;
+
+  /* === Radius System === */
+  --radius-sm: 2px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* === Shadow / Depth System === */
+  --shadow-sunken: inset 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-card: 0 0 0 1px rgba(0,0,0,0.06);
+  --shadow-dropdown: 0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06);
+
+  /* === Component Tokens === */
+  --control-height: 32px;
+  --control-height-sm: 28px;
+  --control-height-lg: 36px;
+  --control-radius: var(--radius-sm);
+  --control-padding-h: 10px;
+
+  --tab-height: 36px;
+  --toolbar-height: 44px;
+  --sidebar-width: 220px;
+  --header-height: 52px;
+  --statusbar-height: 28px;
+
+  /* === Accent Markers === */
+  --accent-strip: 3px;
+  --focus-ring: 0 0 0 2px rgba(27, 94, 59, 0.3);
+}
+
+/* === Utility Classes === */
+.text-display { font-size: var(--font-size-display); font-weight: var(--font-size-display-weight); line-height: var(--line-height-tight); }
+.text-heading { font-size: var(--font-size-heading); font-weight: var(--font-size-heading-weight); line-height: var(--line-height-tight); }
+.text-body { font-size: var(--font-size-body); font-weight: var(--font-size-body-weight); line-height: var(--line-height-normal); }
+.text-caption { font-size: var(--font-size-caption); font-weight: var(--font-size-caption-weight); line-height: var(--line-height-normal); }
+.text-small { font-size: var(--font-size-small); font-weight: var(--font-size-small-weight); line-height: var(--line-height-normal); }
+.text-mono { font-family: var(--font-family-mono); }
+.text-secondary { color: var(--color-text-secondary); }
+.text-tertiary { color: var(--color-text-tertiary); }
+
+.surface-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+}
+.surface-elevated {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-dropdown);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-primary: var(--color-primary);
+  }
+  @layer base {
+    body { background: var(--color-bg-base); color: var(--color-text-primary); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+<div class="app-shell" style="display:flex; flex-direction:column; height:100vh; font-family:'Inter','Noto Sans SC',sans-serif; font-size:13px; color:#1A1D21; background:#F5F6F8;">
+
+  <!-- ========== Header Bar ========== -->
+  <header class="app-header" style="display:flex; align-items:center; justify-content:space-between; height:52px; min-height:52px; padding:0 14px; background:#FFFFFF; border-bottom:1px solid #D5D8DC; z-index:100; user-select:none;">
+    <div class="app-logo" style="display:flex; align-items:center; gap:8px;">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="1" y="1" width="20" height="20" rx="4" fill="#1B5E3B"/>
+        <path d="M7 11.5L9.5 14L15 8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span style="font-size:15px; font-weight:600; color:#1A1D21; letter-spacing:-0.3px;">Dusc AI</span>
+    </div>
+    <nav class="app-menu" style="display:flex; align-items:center; gap:4px;">
+      <a href="#" class="menu-item" style="padding:5px 10px; font-size:13px; color:#5F6368; text-decoration:none; border-radius:3px; transition:background .15s;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px; margin-right:4px;"><path d="M2 3h10M2 7h10M2 11h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>文件
+      </a>
+      <a href="#" class="menu-item" style="padding:5px 10px; font-size:13px; color:#5F6368; text-decoration:none; border-radius:3px; transition:background .15s;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px; margin-right:4px;"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 2v2M7 10v2M2 7h2M10 7h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>设置
+      </a>
+      <a href="#" class="menu-item" style="padding:5px 10px; font-size:13px; color:#5F6368; text-decoration:none; border-radius:3px; transition:background .15s;">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="vertical-align:-2px; margin-right:4px;"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>帮助
+      </a>
+    </nav>
+    <div class="window-controls" style="display:flex; align-items:center; gap:7px;">
+      <span style="width:12px; height:12px; border-radius:50%; background:#F5C542; cursor:pointer; display:inline-block;" title="最小化"></span>
+      <span style="width:12px; height:12px; border-radius:50%; background:#4CD964; cursor:pointer; display:inline-block;" title="最大化"></span>
+      <span style="width:12px; height:12px; border-radius:50%; background:#FF6058; cursor:pointer; display:inline-block;" title="关闭"></span>
+    </div>
+  </header>
+
+  <!-- ========== Tab Navigation Bar ========== -->
+  <nav class="app-tabs" style="display:flex; align-items:stretch; height:36px; min-height:36px; background:#FFFFFF; border-bottom:1px solid #D5D8DC; padding:0 14px; gap:0; user-select:none;">
+    <a href="#" class="tab-item" data-tab-key="data" data-active="false" data-dom-id="tab-data"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; color:#5F6368; text-decoration:none; border-bottom:3px solid transparent; transition:all .15s; cursor:pointer;">
+      数据管理
+    </a>
+    <a href="#" class="tab-item" data-tab-key="model" data-active="false" data-dom-id="tab-model"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; color:#5F6368; text-decoration:none; border-bottom:3px solid transparent; transition:all .15s; cursor:pointer;">
+      模型管理
+    </a>
+    <a href="#" class="tab-item" data-tab-key="inference" data-active="false" data-dom-id="tab-inference"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; color:#5F6368; text-decoration:none; border-bottom:3px solid transparent; transition:all .15s; cursor:pointer;">
+      推理检测
+    </a>
+    <a href="#" class="tab-item" data-tab-key="jetson" data-active="true"
+       style="display:flex; align-items:center; padding:0 16px; font-size:13px; font-weight:600; color:#1A1D21; text-decoration:none; border-bottom:3px solid #1B5E3B; transition:all .15s; cursor:pointer;">
+      Jetson部署
+    </a>
+  </nav>
+
+  <!-- ========== Main Content Area ========== -->
+  <main class="app-content" style="flex:1; overflow:auto; padding:12px; background:#F5F6F8;">
+
+    <!-- ===== Top Action Toolbar ===== -->
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+      <button type="button" style="display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 16px; background:#1B5E3B; color:#FFFFFF; font-size:13px; font-weight:500; border:none; border-radius:2px; cursor:pointer; font-family:inherit; transition:background .15s;">导出 TensorRT</button>
+      <button type="button" style="display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 16px; background:#1B5E3B; color:#FFFFFF; font-size:13px; font-weight:500; border:none; border-radius:2px; cursor:pointer; font-family:inherit; transition:background .15s;">导出 ONNX</button>
+      <button type="button" style="display:inline-flex; align-items:center; justify-content:center; height:36px; padding:0 16px; background:#1B5E3B; color:#FFFFFF; font-size:13px; font-weight:500; border:none; border-radius:2px; cursor:pointer; font-family:inherit; transition:background .15s;">生成部署包</button>
+    </div>
+
+    <!-- ===== Card 1: 选择模型 ===== -->
+    <div style="background:#FFFFFF; border:1px solid #D5D8DC; border-radius:8px; padding:16px; margin-bottom:12px;">
+      <div style="font-size:15px; font-weight:600; color:#1A1D21; margin-bottom:12px;">选择模型</div>
+      <select style="display:block; width:100%; height:36px; padding:0 12px; font-size:13px; font-family:inherit; color:#1A1D21; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; appearance:none; cursor:pointer;">
+        <option>smoke_best.pt</option>
+        <option>smoke_v2.pt</option>
+        <option>fire_smoke_combined.pt</option>
+      </select>
+    </div>
+
+    <!-- ===== Card 2: 高级选项 ===== -->
+    <div style="background:#FFFFFF; border:1px solid #D5D8DC; border-radius:8px; padding:16px; margin-bottom:12px;">
+      <!-- Collapsible Header -->
+      <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; margin-bottom:12px;" onclick="this.parentElement.classList.toggle('collapsed')">
+        <span style="font-size:15px; font-weight:600; color:#1A1D21;">高级选项</span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;">
+          <path d="M3.5 5.25L7 8.75L10.5 5.25" stroke="#5F6368" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <!-- Collapsible Body -->
+      <div style="display:flex; align-items:flex-start; gap:16px;">
+        <!-- 输入分辨率 -->
+        <div style="flex:1;">
+          <label style="display:block; font-size:12px; font-weight:600; color:#5F6368; margin-bottom:6px;">输入分辨率</label>
+          <input type="number" value="640" style="display:block; width:100%; height:32px; padding:0 10px; font-size:13px; font-family:inherit; color:#1A1D21; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; outline:none;" />
+        </div>
+        <!-- 精度 -->
+        <div style="flex:1;">
+          <label style="display:block; font-size:12px; font-weight:600; color:#5F6368; margin-bottom:6px;">精度</label>
+          <select style="display:block; width:100%; height:32px; padding:0 10px; font-size:13px; font-family:inherit; color:#1A1D21; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; appearance:none; cursor:pointer;">
+            <option>FP16</option>
+            <option>FP32</option>
+            <option>INT8</option>
+          </select>
+        </div>
+        <!-- Workspace -->
+        <div style="flex:1;">
+          <label style="display:block; font-size:12px; font-weight:600; color:#5F6368; margin-bottom:6px;">Workspace</label>
+          <select style="display:block; width:100%; height:32px; padding:0 10px; font-size:13px; font-family:inherit; color:#1A1D21; background:#FFFFFF; border:1px solid #D5D8DC; border-radius:2px; appearance:none; cursor:pointer;">
+            <option>4 GB</option>
+            <option>2 GB</option>
+            <option>8 GB</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Card 3: 部署说明 ===== -->
+    <div style="background:#FFFFFF; border:1px solid #D5D8DC; border-radius:8px; padding:16px; margin-bottom:12px;">
+      <div style="font-size:15px; font-weight:600; color:#1A1D21; margin-bottom:12px;">部署说明</div>
+      <textarea readonly style="display:block; width:100%; min-height:140px; padding:12px; font-size:12px; line-height:1.6; font-family:'JetBrains Mono','Consolas',monospace; color:#1A1D21; background:#EDF0F3; border:1px solid #D5D8DC; border-radius:6px; resize:none; outline:none;">=== Jetson Nano/Orin 部署步骤 ===
+1. 将部署包解压到 Jetson 设备
+2. 运行: bash setup_jetson.sh
+3. 测试: python3 smoke_detect.py --model xxx.engine
+4. 启动摄像头推理: python3 smoke_detect.py --source 0</textarea>
+    </div>
+
+    <!-- ===== Card 4: 验证导出 ===== -->
+    <div style="background:#FFFFFF; border:1px solid #D5D8DC; border-radius:8px; padding:16px; margin-bottom:0;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <span style="font-size:15px; font-weight:600; color:#1A1D21;">验证导出</span>
+        <button type="button" style="display:inline-flex; align-items:center; justify-content:center; height:32px; padding:0 14px; background:#FFFFFF; color:#1B5E3B; font-size:13px; font-weight:500; border:1px solid #1B5E3B; border-radius:2px; cursor:pointer; font-family:inherit; transition:all .15s;">验证导出</button>
+      </div>
+      <!-- TensorRT Row -->
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #EDF0F3;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:#E8F5EE; flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2.5 6L5 8.5L9.5 3.5" stroke="#1B7A3D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span style="font-size:13px; color:#1B7A3D;">TensorRT (.engine): 有效</span>
+      </div>
+      <!-- ONNX Row -->
+      <div style="display:flex; align-items:center; gap:10px; padding:8px 0;">
+        <span style="display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:#E8F5EE; flex-shrink:0;">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2.5 6L5 8.5L9.5 3.5" stroke="#1B7A3D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span style="font-size:13px; color:#1B7A3D;">ONNX (.onnx): 有效</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ========== Status Bar ========== -->
+  <footer class="app-statusbar" style="display:flex; align-items:center; justify-content:space-between; height:28px; min-height:28px; padding:0 14px; background:#FFFFFF; border-top:1px solid #D5D8DC; font-size:11px; color:#8C9197; user-select:none; z-index:100;">
+    <div style="display:flex; align-items:center; gap:5px;">
+      <svg width="8" height="8" viewBox="0 0 8 8">
+        <circle cx="4" cy="4" r="3.5" fill="#1B5E3B"/>
+      </svg>
+      <span>部署就绪</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:5px;">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="1.5" y="3" width="11" height="8" rx="1.5" stroke="#8C9197" stroke-width="1.2"/>
+        <rect x="4" y="5" width="6" height="4" rx="0.5" stroke="#8C9197" stroke-width="0.8"/>
+        <line x1="3" y1="7" x2="4" y2="7" stroke="#8C9197" stroke-width="1"/>
+        <line x1="10" y1="7" x2="11" y2="7" stroke="#8C9197" stroke-width="1"/>
+        <line x1="5.5" y1="3" x2="5.5" y2="1.5" stroke="#8C9197" stroke-width="0.8"/>
+        <line x1="8.5" y1="3" x2="8.5" y2="1.5" stroke="#8C9197" stroke-width="0.8"/>
+      </svg>
+      <span>GPU: NVIDIA RTX 3060 (12.0 GB)</span>
+    </div>
+    <div>
+      <span>00:00:00</span>
+    </div>
+  </footer>
+
+</div>
+<!-- /.app-shell -->
+
+
+    <style>
+    :root {
+      --color-primary: #1B5E3B;
+      --color-primary-hover: #15713A;
+      --color-primary-active: #0F5A2E;
+      --color-primary-light: #E8F5EE;
+      --color-primary-subtle: #D1EBD9;
+      --color-bg-base: #F5F6F8;
+      --color-bg-surface: #FFFFFF;
+      --color-bg-sunken: #EDF0F3;
+      --color-bg-hover: #F0F2F5;
+      --color-text-primary: #1A1D21;
+      --color-text-secondary: #5F6368;
+      --color-text-tertiary: #8C9197;
+      --color-border-default: #D5D8DC;
+      --color-border-strong: #B0B5BB;
+      --state-success: #1B7A3D;
+      --state-success-bg: #E8F5EE;
+      --font-family-body: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-family-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: var(--font-family-body); font-size: 13px; color: var(--color-text-primary); background: var(--color-bg-base); }
+  </style>
+</body>
+</html>
