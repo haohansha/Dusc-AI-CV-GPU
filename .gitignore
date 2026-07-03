@@ -13,6 +13,8 @@ videos/
 data/factory_frames/
 data/factory_dataset/train/
 data/factory_dataset/val/
+data/media/
+resource/
 *.engine
 *.onnx
 venv/
@@ -21,7 +23,17 @@ venv/
 Ultralytics/
 *.mp4
 *.avi
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+*.tif
+*.txt
 app_config.json
 dist/
 build/
 *.spec
+!requirements*.txt
+!configs/predefined_classes.txt
+!.trae/**/*.txt

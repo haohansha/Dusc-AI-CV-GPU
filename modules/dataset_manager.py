@@ -23,10 +23,21 @@ class MediaInfo:
     has_labels: bool
 
 
+@dataclass
+class LabelInfo:
+    name: str           # 文件名，如 "smoke_01.txt"
+    path: str           # 相对路径，如 "data/media/labels/smoke_01.txt"
+    file_size: int
+    line_count: int     # 标注行数（一个标注框一行）
+    imported_at: datetime
+
+
 class DatasetManager:
     def __init__(self, project_root: Path):
         self.project_root = Path(project_root)
         self.registry_path = self.project_root / "configs" / "media_registry.json"
+        # 统一资源目录：所有导入的视频/图片/标签及抽帧产物均存放于此
+        self.resource_dir = self.project_root / "resource"
         self._registry = {"media": {}}
         self._load_registry()
 
@@ -42,65 +53,135 @@ class DatasetManager:
         with open(self.registry_path, "w", encoding="utf-8") as f:
             json.dump(self._registry, f, indent=2, ensure_ascii=False, default=str)
 
-    def scan_media_dir(self):
-        data_dir = self.project_root / "data"
+    def scan_media_dir(self, target_dir=None, copy_files=True):
+        """扫描文件夹，导入所有视频/图片/标签文件
+
+        Args:
+            target_dir: 要扫描的目录，默认为 project_root/data
+            copy_files: True=复制到项目内 data/media/ 下并登记；
+                        False=仅登记原路径不复制
+
+        Returns:
+            dict: {"videos": [MediaInfo...], "images": [MediaInfo...], "labels": [LabelInfo...]}
+        """
+        if target_dir is not None:
+            data_dir = Path(target_dir)
+        else:
+            data_dir = self.project_root / "data"
         if not data_dir.exists():
-            return []
+            return {"videos": [], "images": [], "labels": []}
 
         video_extensions = {".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv"}
         image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif"}
 
-        new_entries = []
+        new_videos = []
+        new_images = []
+        new_labels = []
 
         for file_path in data_dir.rglob("*"):
             if not file_path.is_file():
                 continue
             suffix = file_path.suffix.lower()
-            if suffix not in video_extensions and suffix not in image_extensions:
+
+            if suffix in video_extensions:
+                media_type = "video"
+            elif suffix in image_extensions:
+                media_type = "image"
+            elif suffix == ".txt":
+                media_type = "label"
+            else:
                 continue
 
-            relative_path = str(file_path.relative_to(self.project_root)).replace("\\", "/")
             name = file_path.name
 
-            if name in self._registry.get("media", {}):
+            # 已存在则跳过
+            if media_type != "label" and name in self._registry.get("media", {}):
+                continue
+            if media_type == "label" and name in self._registry.get("labels", {}):
                 continue
 
-            media_type = "video" if suffix in video_extensions else "image"
-            file_size = file_path.stat().st_size
+            # 决定文件最终路径：复制 or 原地
+            actual_path = file_path
+            if copy_files:
+                if media_type == "video":
+                    dest_dir = self.resource_dir / "videos"
+                elif media_type == "image":
+                    dest_dir = self.resource_dir / "images"
+                else:  # label
+                    dest_dir = self.resource_dir / "labels"
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                dest_path = dest_dir / name
+                # 避免复制到自身
+                if file_path.resolve() != dest_path.resolve():
+                    shutil.copy2(str(file_path), str(dest_path))
+                    actual_path = dest_path
 
-            entry = {
-                "path": relative_path,
-                "type": media_type,
-                "duration": 0.0,
-                "resolution": "",
-                "fps": 0.0,
-                "frame_count": 0,
-                "file_size": file_size,
-                "imported_at": datetime.now().isoformat(),
-                "has_labels": False,
-            }
+            try:
+                stored_path = str(actual_path.relative_to(self.project_root)).replace("\\", "/")
+            except ValueError:
+                # 文件在项目外，存绝对路径
+                stored_path = str(actual_path).replace("\\", "/")
 
-            if media_type == "video":
-                cap = cv2.VideoCapture(str(file_path))
-                if cap.isOpened():
-                    entry["fps"] = round(cap.get(cv2.CAP_PROP_FPS), 2)
-                    entry["frame_count"] = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    entry["resolution"] = f"{w}x{h}"
-                    if entry["fps"] > 0:
-                        entry["duration"] = round(entry["frame_count"] / entry["fps"], 2)
-                    cap.release()
+            file_size = actual_path.stat().st_size
+            imported_at = datetime.now().isoformat()
 
-            self._registry.setdefault("media", {})[name] = entry
-            new_entries.append(self._entry_to_mediainfo(name, entry))
+            if media_type == "label":
+                line_count = 0
+                try:
+                    with open(actual_path, "r", encoding="utf-8") as f:
+                        for line in f:
+                            if line.strip():
+                                line_count += 1
+                except Exception:
+                    line_count = 0
+                entry = {
+                    "path": stored_path,
+                    "file_size": file_size,
+                    "line_count": line_count,
+                    "imported_at": imported_at,
+                }
+                self._registry.setdefault("labels", {})[name] = entry
+                new_labels.append(LabelInfo(
+                    name=name, path=stored_path,
+                    file_size=file_size, line_count=line_count,
+                    imported_at=datetime.now(),
+                ))
+            else:
+                entry = {
+                    "path": stored_path,
+                    "type": media_type,
+                    "duration": 0.0,
+                    "resolution": "",
+                    "fps": 0.0,
+                    "frame_count": 0,
+                    "file_size": file_size,
+                    "imported_at": imported_at,
+                    "has_labels": False,
+                }
+                if media_type == "video":
+                    cap = cv2.VideoCapture(str(actual_path))
+                    if cap.isOpened():
+                        entry["fps"] = round(cap.get(cv2.CAP_PROP_FPS), 2)
+                        entry["frame_count"] = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        entry["resolution"] = f"{w}x{h}"
+                        if entry["fps"] > 0:
+                            entry["duration"] = round(entry["frame_count"] / entry["fps"], 2)
+                        cap.release()
+                self._registry.setdefault("media", {})[name] = entry
+                mi = self._entry_to_mediainfo(name, entry)
+                if media_type == "video":
+                    new_videos.append(mi)
+                else:
+                    new_images.append(mi)
 
         self._save_registry()
-        return new_entries
+        return {"videos": new_videos, "images": new_images, "labels": new_labels}
 
     def import_video(self, source_path) -> MediaInfo:
         source_path = Path(source_path)
-        dest_dir = self.project_root / "data" / "media"
+        dest_dir = self.resource_dir / "videos"
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         dest_path = dest_dir / source_path.name
@@ -141,7 +222,7 @@ class DatasetManager:
         return self._entry_to_mediainfo(name, entry)
 
     def import_images(self, source_paths) -> list:
-        dest_dir = self.project_root / "data" / "media" / "images"
+        dest_dir = self.resource_dir / "images"
         dest_dir.mkdir(parents=True, exist_ok=True)
 
         results = []
@@ -174,13 +255,50 @@ class DatasetManager:
         self._save_registry()
         return results
 
+    def import_labels(self, source_paths) -> list:
+        """导入 YOLO 标签文件（.txt）到 resource/labels/"""
+        dest_dir = self.resource_dir / "labels"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        results = []
+        for sp in source_paths:
+            sp = Path(sp)
+            if sp.suffix.lower() != ".txt":
+                continue
+            dest_path = dest_dir / sp.name
+            shutil.copy2(str(sp), str(dest_path))
+            relative_path = str(dest_path.relative_to(self.project_root)).replace("\\", "/")
+            # 统计非空行数（标注框数）
+            line_count = 0
+            try:
+                with open(dest_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip():
+                            line_count += 1
+            except Exception:
+                line_count = 0
+            entry = {
+                "path": relative_path,
+                "file_size": dest_path.stat().st_size,
+                "line_count": line_count,
+                "imported_at": datetime.now().isoformat(),
+            }
+            name = sp.name
+            self._registry.setdefault("labels", {})[name] = entry
+            results.append(LabelInfo(
+                name=name, path=relative_path,
+                file_size=entry["file_size"], line_count=line_count,
+                imported_at=datetime.now(),
+            ))
+        self._save_registry()
+        return results
+
     def extract_frames(self, video_path, interval=15, output_dir=None, max_frames=None):
         video_path = Path(video_path)
         if not video_path.exists():
             raise FileNotFoundError(f"Video not found: {video_path}")
 
         if output_dir is None:
-            output_dir = self.project_root / "data" / "factory_frames"
+            output_dir = self.resource_dir / "images"
         else:
             output_dir = Path(output_dir)
 
@@ -194,6 +312,7 @@ class DatasetManager:
 
         extracted = 0
         frame_idx = 0
+        generated_paths = []
 
         while True:
             ret, frame = cap.read()
@@ -204,6 +323,7 @@ class DatasetManager:
                 filename = f"{video_name}_frame_{frame_idx:06d}.jpg"
                 output_path = output_dir / filename
                 cv2.imwrite(str(output_path), frame)
+                generated_paths.append(output_path)
                 extracted += 1
 
             frame_idx += 1
@@ -212,6 +332,31 @@ class DatasetManager:
                 break
 
         cap.release()
+
+        # 自动注册抽帧生成的图片到 registry（跳过已登记的）
+        media = self._registry.setdefault("media", {})
+        new_count = 0
+        for img_path in generated_paths:
+            name = img_path.name
+            if name in media:
+                continue
+            relative_path = str(img_path.relative_to(self.project_root)).replace("\\", "/")
+            entry = {
+                "path": relative_path,
+                "type": "image",
+                "duration": 0.0,
+                "resolution": "",
+                "fps": 0.0,
+                "frame_count": 1,
+                "file_size": img_path.stat().st_size,
+                "imported_at": datetime.now().isoformat(),
+                "has_labels": False,
+            }
+            media[name] = entry
+            new_count += 1
+        if new_count > 0:
+            self._save_registry()
+
         return extracted
 
     def prepare_dataset(self, frames_dir, original_dataset_dir=None, output_dir=None, val_split=0.2):
@@ -354,13 +499,49 @@ class DatasetManager:
         entry = media[name]
 
         if delete_file:
-            file_path = self.project_root / entry["path"]
+            raw_path = entry["path"]
+            p = Path(raw_path)
+            file_path = p if p.is_absolute() else self.project_root / p
             if file_path.exists():
                 file_path.unlink()
 
         del media[name]
         self._save_registry()
         return True
+
+    def list_labels(self):
+        labels = self._registry.get("labels", {})
+        result = []
+        for name, entry in labels.items():
+            result.append(LabelInfo(
+                name=name,
+                path=entry["path"],
+                file_size=entry.get("file_size", 0),
+                line_count=entry.get("line_count", 0),
+                imported_at=datetime.fromisoformat(entry["imported_at"]) if isinstance(entry["imported_at"], str) else entry["imported_at"],
+            ))
+        return result
+
+    def remove_label(self, name, delete_file=False):
+        labels = self._registry.get("labels", {})
+        if name not in labels:
+            return False
+        entry = labels[name]
+        if delete_file:
+            raw_path = entry["path"]
+            p = Path(raw_path)
+            file_path = p if p.is_absolute() else self.project_root / p
+            if file_path.exists():
+                file_path.unlink()
+        del labels[name]
+        self._save_registry()
+        return True
+
+    def has_label_for(self, image_name):
+        """检查图片是否有对应标签（按 stem 匹配，如 smoke_01.jpg ↔ smoke_01.txt）"""
+        image_stem = Path(image_name).stem
+        labels = self._registry.get("labels", {})
+        return any(Path(name).stem == image_stem for name in labels.keys())
 
     def _entry_to_mediainfo(self, name, entry):
         return MediaInfo(

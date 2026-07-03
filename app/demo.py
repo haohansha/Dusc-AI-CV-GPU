@@ -30,157 +30,23 @@ def _placeholder(parent, name):
 
 
 # ============================================================
-# 页面一：数据管理（三栏：素材列表 | 预览区 | 标签管理）
+# 页面一：数据管理（使用真实 DataPage，接入 DatasetManager 后端）
 # ============================================================
 class DataManagementPage(QWidget):
+    """Demo 包装器：用真实 DataPage + 真实 DatasetManager 展示完整数据导入功能"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._media_data = [
-            {"name": "factory.mp4", "type": "video"},
-            {"name": "smoke_01.jpg", "type": "image", "labels": [
-                {"cls": "smoke", "x": 0.12, "y": 0.23, "w": 0.45, "h": 0.67},
-                {"cls": "smoke", "x": 0.50, "y": 0.10, "w": 0.30, "h": 0.40},
-            ]},
-            {"name": "smoke_02.jpg", "type": "image", "labels": [
-                {"cls": "smoke", "x": 0.20, "y": 0.30, "w": 0.50, "h": 0.45},
-            ]},
-            {"name": "test.avi", "type": "video"},
-        ]
-        self._setup_ui()
-        self._load_media_list()
+        from app.ui.data_page import DataPage
+        from modules.dataset_manager import DatasetManager
 
-    def _setup_ui(self):
+        project_root = Path(__file__).parent.parent
+        dataset_mgr = DatasetManager(project_root)
+
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(10)
-
-        # 顶部按钮栏（唯一一组）
-        btn_row = QHBoxLayout()
-        self.btn_import_video = QPushButton("导入视频")
-        self.btn_import_image = QPushButton("导入图片")
-        self.btn_delete = QPushButton("删除")
-        self.btn_labelimg = QPushButton("启动LabelImg")
-        for btn in (self.btn_import_video, self.btn_import_image,
-                    self.btn_delete, self.btn_labelimg):
-            btn_row.addWidget(btn)
-        btn_row.addStretch()
-        layout.addLayout(btn_row)
-
-        # 三栏 QSplitter 1:3:1
-        splitter = QSplitter(Qt.Horizontal)
-
-        # 左栏：素材列表
-        left_group = QGroupBox("素材列表")
-        left_layout = QVBoxLayout(left_group)
-        self.media_list = QListWidget()
-        self.media_list.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.media_list.currentRowChanged.connect(self._on_media_selected)
-        left_layout.addWidget(self.media_list)
-        splitter.addWidget(left_group)
-
-        # 中栏：预览区
-        mid_group = QGroupBox("预览区")
-        mid_layout = QVBoxLayout(mid_group)
-        self.preview_label = QLabel("请选择左侧素材进行预览")
-        self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setMinimumSize(480, 360)
-        self.preview_label.setStyleSheet(
-            "QLabel { border: 1px solid #cccccc; background-color: #fafafa; color: #888888; }"
-        )
-        mid_layout.addWidget(self.preview_label)
-        splitter.addWidget(mid_group)
-
-        # 右栏：标签管理
-        self.right_group = QGroupBox("标签管理")
-        right_layout = QVBoxLayout(self.right_group)
-        right_layout.addWidget(QLabel("当前图片标签"))
-
-        self.label_list = QListWidget()
-        self.label_list.setMaximumHeight(200)
-        right_layout.addWidget(self.label_list)
-
-        add_row = QHBoxLayout()
-        self.btn_add_label = QPushButton("+ 添加标签")
-        add_row.addWidget(self.btn_add_label)
-        right_layout.addLayout(add_row)
-
-        cls_row = QHBoxLayout()
-        cls_row.addWidget(QLabel("类别:"))
-        self.cls_combo = QComboBox()
-        self.cls_combo.addItems(["smoke", "fire", "person"])
-        cls_row.addWidget(self.cls_combo)
-        cls_row.addStretch()
-        right_layout.addLayout(cls_row)
-
-        coord_form = QFormLayout()
-        self.spin_x = QDoubleSpinBox()
-        self.spin_y = QDoubleSpinBox()
-        self.spin_w = QDoubleSpinBox()
-        self.spin_h = QDoubleSpinBox()
-        for spin in (self.spin_x, self.spin_y, self.spin_w, self.spin_h):
-            spin.setRange(0.0, 1.0)
-            spin.setDecimals(2)
-            spin.setSingleStep(0.01)
-        self.spin_w.setValue(0.30)
-        self.spin_h.setValue(0.40)
-        coord_form.addRow("x:", self.spin_x)
-        coord_form.addRow("y:", self.spin_y)
-        coord_form.addRow("w:", self.spin_w)
-        coord_form.addRow("h:", self.spin_h)
-        right_layout.addLayout(coord_form)
-
-        right_layout.addStretch()
-        splitter.addWidget(self.right_group)
-
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 3)
-        splitter.setStretchFactor(2, 1)
-        splitter.setSizes([200, 600, 200])
-        layout.addWidget(splitter)
-
-        # 底部状态
-        self.status_label = QLabel("共 4 个素材 | 当前: 无选择")
-        self.status_label.setStyleSheet("color: #555555; padding: 4px;")
-        layout.addWidget(self.status_label)
-
-        # 连接占位信号
-        self.btn_import_video.clicked.connect(lambda: _placeholder(self, "导入视频"))
-        self.btn_import_image.clicked.connect(lambda: _placeholder(self, "导入图片"))
-        self.btn_delete.clicked.connect(lambda: _placeholder(self, "删除"))
-        self.btn_labelimg.clicked.connect(lambda: _placeholder(self, "启动LabelImg"))
-        self.btn_add_label.clicked.connect(lambda: _placeholder(self, "添加标签"))
-
-    def _load_media_list(self):
-        self.media_list.clear()
-        for m in self._media_data:
-            self.media_list.addItem(QListWidgetItem(m["name"]))
-
-    def _on_media_selected(self, row):
-        if row < 0 or row >= len(self._media_data):
-            return
-        info = self._media_data[row]
-        name = info["name"]
-        mtype = info["type"]
-
-        # 预览区占位
-        if mtype == "video":
-            self.preview_label.setText(f"[视频预览]\n{name}\n(首帧)")
-            self.right_group.setVisible(False)
-            self.status_label.setText(f"共 {len(self._media_data)} 个素材 | 当前: {name} (视频，无标签)")
-        else:
-            labels = info.get("labels", [])
-            self.preview_label.setText(f"[图片预览]\n{name}\n(含 {len(labels)} 个标注框)")
-            self.right_group.setVisible(True)
-            self._load_labels(labels)
-            self.status_label.setText(f"共 {len(self._media_data)} 个素材 | 当前: {name} ({len(labels)}个标签)")
-
-    def _load_labels(self, labels):
-        self.label_list.clear()
-        for i, lb in enumerate(labels):
-            text = (f"#{i} {lb['cls']}   "
-                    f"x:{lb['x']:.2f} y:{lb['y']:.2f} "
-                    f"w:{lb['w']:.2f} h:{lb['h']:.2f}")
-            self.label_list.addItem(QListWidgetItem(text))
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self._page = DataPage(project_root, dataset_mgr)
+        layout.addWidget(self._page)
 
 
 # ============================================================
@@ -580,110 +446,58 @@ class InferenceDemoPage(QWidget):
 
 
 # ============================================================
-# 页面四：Jetson部署
+# 页面四：Jetson部署（使用真实 DeployPage，卡片式布局 + 深绿色主题）
 # ============================================================
 class DeployDemoPage(QWidget):
+    """Demo 包装器：用真实 DeployPage + mock 依赖展示美化后的部署界面"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._setup_ui()
+        from app.ui.deploy_page import DeployPage
 
-    def _setup_ui(self):
+        # 构造 mock 依赖（Demo 模式不执行真实导出）
+        project_root = Path(__file__).parent.parent
+        mock_export = _MockExportEngine(project_root)
+        mock_model_mgr = _MockModelManager()
+
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(10)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self._page = DeployPage(project_root, mock_export, mock_model_mgr, app_config=None)
+        layout.addWidget(self._page)
 
-        # 顶部按钮栏
-        btn_row = QHBoxLayout()
-        self.btn_export_trt = QPushButton("导出 TensorRT")
-        self.btn_export_onnx = QPushButton("导出 ONNX")
-        self.btn_deploy_pkg = QPushButton("生成部署包")
-        for btn in (self.btn_export_trt, self.btn_export_onnx, self.btn_deploy_pkg):
-            btn_row.addWidget(btn)
-        btn_row.addStretch()
-        layout.addLayout(btn_row)
 
-        # 模型选择
-        model_group = QGroupBox("选择模型")
-        model_layout = QVBoxLayout(model_group)
-        self.combo_model = QComboBox()
-        self.combo_model.addItems(["smoke_best.pt", "yolov8n.pt", "factory.pt"])
-        model_layout.addWidget(self.combo_model)
-        layout.addWidget(model_group)
+class _MockModelManager:
+    """Demo 用 mock 模型管理器"""
+    def list_models(self):
+        from collections import namedtuple
+        Info = namedtuple("Info", ["name", "path"])
+        return [
+            Info("smoke_best.pt", "models/smoke_best.pt"),
+            Info("yolov8n.pt", "models/yolov8n.pt"),
+            Info("factory.pt", "models/factory.pt"),
+        ]
 
-        # 高级选项（可折叠）
-        adv_group = QGroupBox("高级选项")
-        adv_layout = QVBoxLayout(adv_group)
-        self.btn_toggle_adv = QPushButton("▼ 展开")
-        self.btn_toggle_adv.clicked.connect(self._toggle_advanced)
-        adv_layout.addWidget(self.btn_toggle_adv)
 
-        self.adv_panel = QWidget()
-        adv_form = QFormLayout(self.adv_panel)
-        self.spin_imgsz = QSpinBox()
-        self.spin_imgsz.setRange(320, 1280)
-        self.spin_imgsz.setSingleStep(32)
-        self.spin_imgsz.setValue(640)
-        adv_form.addRow("输入分辨率:", self.spin_imgsz)
-        self.combo_precision = QComboBox()
-        self.combo_precision.addItems(["FP16", "INT8"])
-        adv_form.addRow("精度:", self.combo_precision)
-        self.spin_workspace = QSpinBox()
-        self.spin_workspace.setRange(1, 16)
-        self.spin_workspace.setValue(4)
-        adv_form.addRow("Workspace (GB):", self.spin_workspace)
-        self.adv_panel.setVisible(False)
-        adv_layout.addWidget(self.adv_panel)
-        layout.addWidget(adv_group)
+class _MockExportEngine:
+    """Demo 用 mock 导出引擎，所有操作返回占位结果"""
+    def __init__(self, project_root):
+        self.project_root = project_root
 
-        # 部署说明
-        instr_group = QGroupBox("部署说明")
-        instr_layout = QVBoxLayout(instr_group)
-        self.instr_text = QTextEdit()
-        self.instr_text.setReadOnly(True)
-        self.instr_text.setMaximumHeight(200)
-        self.instr_text.setPlainText(
-            "=== Jetson Nano/Orin 部署步骤 ===\n"
-            "1. 将部署包解压到 Jetson 设备\n"
-            "2. 运行: bash setup_jetson.sh\n"
-            "3. 测试: python3 smoke_detect.py --model xxx.engine\n"
-            "4. 生产: python3 smoke_detect.py --model xxx.engine --rtsp rtsp://...\n"
-            "\n"
-            "=== 支持的模型格式 ===\n"
-            "- TensorRT (.engine): 推理速度最快, Jetson 推荐\n"
-            "- ONNX (.onnx): 跨平台兼容\n"
-            "- PyTorch (.pt): 直接推理, 速度较慢\n"
-            "\n"
-            "=== 性能参考 (Jetson Orin Nano 8GB) ===\n"
-            "- TensorRT FP16: ~60-80 FPS\n"
-            "- ONNX Runtime: ~25-40 FPS\n"
-            "- PyTorch: ~15-25 FPS"
-        )
-        instr_layout.addWidget(self.instr_text)
-        layout.addWidget(instr_group)
+    def export_tensorrt(self, model_path, config=None, progress_callback=None):
+        QMessageBox.information(None, "Demo", f"导出 TensorRT（Demo 占位）\n模型: {model_path}")
+        return None
 
-        # 验证导出
-        verify_group = QGroupBox("验证导出")
-        verify_layout = QHBoxLayout(verify_group)
-        self.btn_verify = QPushButton("验证导出")
-        verify_layout.addWidget(self.btn_verify)
-        self.lbl_verify = QLabel("TensorRT (.engine): ✓ 有效\nONNX (.onnx): ✓ 有效")
-        self.lbl_verify.setStyleSheet("color: #008000; padding: 4px;")
-        verify_layout.addWidget(self.lbl_verify)
-        verify_layout.addStretch()
-        layout.addWidget(verify_group)
+    def export_onnx(self, model_path, config=None, progress_callback=None):
+        QMessageBox.information(None, "Demo", f"导出 ONNX（Demo 占位）\n模型: {model_path}")
+        return None
 
-        layout.addStretch()
+    def generate_deploy_package(self, model_path, output_dir, progress_callback=None):
+        QMessageBox.information(None, "Demo", f"生成部署包（Demo 占位）\n模型: {model_path}")
+        return None
 
-        # 占位连接
-        self.btn_export_trt.clicked.connect(lambda: _placeholder(self, "导出 TensorRT"))
-        self.btn_export_onnx.clicked.connect(lambda: _placeholder(self, "导出 ONNX"))
-        self.btn_deploy_pkg.clicked.connect(lambda: _placeholder(self, "生成部署包"))
-        self.btn_verify.clicked.connect(lambda: _placeholder(self, "验证导出"))
-
-    def _toggle_advanced(self):
-        visible = self.adv_panel.isVisible()
-        self.adv_panel.setVisible(not visible)
-        self.btn_toggle_adv.setText("▲ 收起" if not visible else "▼ 展开")
+    def verify_export(self, output_path):
+        # Demo 模式下模拟 ONNX 有效
+        return output_path.endswith(".onnx")
 
 
 # ============================================================

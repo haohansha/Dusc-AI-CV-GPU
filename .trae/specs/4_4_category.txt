@@ -1,0 +1,5 @@
+# 4.4 Spec 规格文档
+
+## 子目录
+- nano-config-baseline/ | Nano 环境参数全局化 spec
+- smoke-ai-platform/ | 烟雾 AI 平台 spec

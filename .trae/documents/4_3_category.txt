@@ -1,0 +1,16 @@
+# 4.3 开发规划文档（fine-tune、部署、UI 改版等）
+
+## 文件
+- fine-tuning-smoke-model-plan.md | 烟雾模型微调方案
+- finetune-execute-plan.md | 微调执行计划
+- font-enlarge-and-run-script.md | 字号放大与运行脚本
+- foundry-smoke-ai-fan-control-plan.md | 工厂烟雾 AI 风机控制方案
+- jetson-deployment-plan.md | Jetson 部署方案
+- jetson-nano-deploy-guide.md | Nano 部署指南
+- labelimg-outside-setup-plan.md | LabelImg 外部安装
+- project-status-summary-plan.md | 项目状态总结
+- round2-finetune-plan.md | 第二轮微调方案
+- ui-layout-redesign.md | UI 布局重设计
+- ui-redesign-implementation.md | UI 重设计实现
+- video-detection-guide-plan.md | 视频检测指南方案
+- folder-category-markers.md | 文件夹分类标记文件方案

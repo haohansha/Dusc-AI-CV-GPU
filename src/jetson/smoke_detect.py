@@ -1,10 +1,15 @@
-import argparse, cv2, time, sys, subprocess
+import argparse, cv2, time, sys, subprocess, os
 import numpy as np
+from datetime import datetime
 from pathlib import Path
 from ultralytics import YOLO
 
 FAN_SPEEDS = {"LIGHT": 20, "MEDIUM": 50, "HEAVY": 100}
 prev_level = None
+
+# 数据库存储（可选，--no-db 关闭）
+_storage = None
+_current_video_path = None  # 当前小时视频片段路径
 
 # 颜色 (B, G, R)
 COLORS = {
@@ -215,9 +220,27 @@ def main():
     parser.add_argument("--rtsp", help="RTSP URL")
     parser.add_argument("--show", action="store_true", help="display window with annotations")
     parser.add_argument("--save", help="optional output video path")
+    parser.add_argument("--data-dir", default=str(Path.home() / "smoke_data"),
+                        help="data directory for SQLite db and videos (default: ~/smoke_data)")
+    parser.add_argument("--no-db", action="store_true", help="disable SQLite event logging")
     args = parser.parse_args()
 
+    global _storage, _current_video_path
+
     detector = SmokeDetector(args.model, args.conf)
+
+    # 初始化数据库存储
+    if not args.no_db:
+        try:
+            # 尝试导入（Nano 上可能没有 modules 包）
+            sys.path.insert(0, str(Path(__file__).parent.parent.parent / "modules"))
+            from data_storage import DataStorage
+            _storage = DataStorage(base_dir=Path(args.data_dir))
+            print(f"Database: {_storage.db_path}")
+            print(f"Videos dir: {_storage.videos_dir}")
+        except Exception as e:
+            print(f"Warning: data storage disabled ({e})")
+            _storage = None
 
     if args.video:
         cap = cv2.VideoCapture(args.video)
@@ -245,26 +268,28 @@ def main():
     else:
         print()
 
+    # 视频写入：--save 指定单文件，否则按小时自动分文件（仅启用 db 时）
     writer = None
+    current_hour = None
+    use_hourly_video = (not args.save) and (_storage is not None)
+
+    def open_writer(path, w, h):
+        ext = Path(path).suffix.lower()
+        fourcc = cv2.VideoWriter_fourcc(*"XVID") if ext == ".avi" else cv2.VideoWriter_fourcc(*"mp4v")
+        wr = cv2.VideoWriter(path, fourcc, 20.0, (w, h))
+        if not wr.isOpened():
+            print(f"Warning: cannot open writer for {path}")
+            return None
+        print(f"Saving to: {path} ({w}x{h} @ 20 FPS)")
+        return wr
+
     if args.save:
-        # Nano 上 mp4v 可能静默失败，根据后缀选择更稳的 fourcc
-        ext = Path(args.save).suffix.lower()
-        if ext == ".avi":
-            fourcc = cv2.VideoWriter_fourcc(*"XVID")
-        elif ext == ".mp4":
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        else:
-            fourcc = cv2.VideoWriter_fourcc(*"XVID")
-        writer = cv2.VideoWriter(args.save, fourcc, 20.0, (w, h))
-        if not writer.isOpened():
-            print(f"Warning: cannot open writer for {args.save}, saving disabled")
-            writer = None
-        else:
-            print(f"Saving to: {args.save} ({w}x{h} @ 20 FPS, fourcc={'XVID' if ext!='.mp4' else 'mp4v'})")
+        writer = open_writer(args.save, w, h)
 
     frame_count = 0
     total_ms = 0
     log_interval = 30
+    last_stats_hour = None
 
     try:
         while True:
@@ -279,9 +304,31 @@ def main():
             result = detector.detect(frame)
             total_ms += result["inference_ms"]
 
-            if args.show or args.save:
+            # 按小时切换视频文件
+            now = datetime.now()
+            hour_str = now.strftime("%Y%m%d_%H")
+            if use_hourly_video and hour_str != current_hour:
+                # 切换到新小时文件
+                if writer is not None:
+                    writer.release()
+                _current_video_path = str(_storage.videos_dir / f"{hour_str}.avi")
+                writer = open_writer(_current_video_path, w, h)
+                current_hour = hour_str
+                # 聚合上一小时的统计
+                if last_stats_hour and _storage:
+                    try:
+                        stats = _storage.aggregate_hour(last_stats_hour)
+                        if stats:
+                            print(f"  [Stats {last_stats_hour}] events={stats['total_events']} "
+                                  f"smoke={stats['smoke_events']} max_level={stats['max_level']}")
+                    except Exception as e:
+                        print(f"  Stats aggregation error: {e}")
+                last_stats_hour = now.strftime("%Y-%m-%dT%H")
+
+            # 写入视频帧
+            if args.show or args.save or use_hourly_video:
                 annotated = detector.draw(frame, result)
-                if args.save and writer is not None:
+                if writer is not None:
                     writer.write(annotated)
                 if args.show:
                     cv2.imshow("Smoke Detection (press Q to quit)", annotated)
@@ -290,12 +337,28 @@ def main():
                         print("\nStopped by window key")
                         break
 
+            # 风扇控制 + 数据库写入（仅检测到烟雾时记录）
             if result["has_smoke"] or prev_level is not None:
                 max_c = max((d["conf"] for d in result["detections"]
                             if "smoke" in d["class"].lower()), default=0)
                 max_a = max((d["area_pct"] for d in result["detections"]
                             if "smoke" in d["class"].lower()), default=0)
                 fan_control(result["level"], max_c, max_a, result["inference_ms"])
+
+                # 写入数据库（每个检测框一条记录）
+                if _storage is not None and result["detections"]:
+                    try:
+                        for d in result["detections"]:
+                            _storage.insert_event(
+                                cls_name=d["class"],
+                                conf=d["conf"],
+                                area_pct=d["area_pct"],
+                                level=result["level"],
+                                video_path=_current_video_path,
+                                inference_ms=result["inference_ms"],
+                            )
+                    except Exception as e:
+                        print(f"  DB write error: {e}")
 
             if frame_count % log_interval == 0:
                 avg_ms = total_ms / frame_count
@@ -305,16 +368,31 @@ def main():
     except KeyboardInterrupt:
         print("\nStopped by user")
 
+    # 退出时聚合当前小时统计
+    if _storage and last_stats_hour:
+        try:
+            stats = _storage.aggregate_hour(last_stats_hour)
+            if stats:
+                print(f"  [Final Stats {last_stats_hour}] events={stats['total_events']} "
+                      f"smoke={stats['smoke_events']} max_level={stats['max_level']}")
+        except Exception as e:
+            print(f"  Final stats error: {e}")
+
     if args.show:
         cv2.destroyAllWindows()
     if writer is not None:
         writer.release()
     cap.release()
+    if _storage is not None:
+        _storage.close()
     avg_ms = total_ms / frame_count if frame_count > 0 else 0
     print(f"\n=== Summary ===")
     print(f"Total frames: {frame_count}")
     if avg_ms > 0:
         print(f"Avg inference: {avg_ms:.1f}ms ({1000/avg_ms:.1f} FPS)")
+    if _storage is not None:
+        print(f"Database: {_storage.db_path}")
+        print(f"Videos: {_storage.videos_dir}")
 
 
 if __name__ == "__main__":
