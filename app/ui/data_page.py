@@ -3,10 +3,12 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QFileDialog, QMessageBox, QInputDialog, QListWidget, QListWidgetItem,
     QSplitter, QGroupBox, QLabel, QAbstractItemView, QMenu, QAction,
     QProgressBar, QDialog, QFormLayout, QSpinBox, QDialogButtonBox,
-    QRadioButton, QButtonGroup, QFrame)
+    QRadioButton, QButtonGroup, QFrame, QSizePolicy)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QPixmap, QImage
 import cv2
+
+from app.ui.label_editor_dialog import LabelEditorDialog
 
 
 class DataPage(QWidget):
@@ -56,6 +58,10 @@ class DataPage(QWidget):
         self.btn_extract.clicked.connect(self._on_extract_frames)
         btn_row.addWidget(self.btn_extract)
 
+        self.btn_annotate = QPushButton("添加标签")
+        self.btn_annotate.clicked.connect(self._on_annotate)
+        btn_row.addWidget(self.btn_annotate)
+
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
@@ -101,6 +107,7 @@ class DataPage(QWidget):
         self.preview_label = QLabel("请选择左侧素材进行预览")
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setMinimumSize(480, 360)
+        self.preview_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.preview_label.setStyleSheet(
             "QLabel { border: 1px solid #cccccc; background-color: #fafafa; color: #888888; }"
         )
@@ -610,6 +617,16 @@ class DataPage(QWidget):
             QMessageBox.information(self, "抽帧完成", f"成功抽取 {count} 帧，已自动加入图片素材。")
         except Exception as e:
             QMessageBox.critical(self, "抽帧失败", f"抽帧失败:\n{str(e)}")
+
+    def _on_annotate(self):
+        """打开标签标注窗口"""
+        images = [m for m in self.dataset_manager.list_media() if m.media_type == "image"]
+        if not images:
+            QMessageBox.warning(self, "提示", "当前没有图片素材可标注，请先导入图片或抽帧")
+            return
+        dialog = LabelEditorDialog(self.project_root, self.dataset_manager, self)
+        if dialog.exec_() == QDialog.Accepted:
+            self._refresh_media()
 
     # ---------- 外部接口 ----------
 

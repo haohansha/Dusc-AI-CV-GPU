@@ -292,6 +292,42 @@ class DatasetManager:
         self._save_registry()
         return results
 
+    def save_label_for_image(self, image_name, boxes):
+        """保存图片的标签到 resource/labels/<stem>.txt，覆盖原有内容
+
+        Args:
+            image_name: 图片文件名，如 "smoke_01.jpg"
+            boxes: list of (class_id, xc, yc, w, h) 归一化坐标
+        Returns:
+            LabelInfo
+        """
+        stem = Path(image_name).stem
+        dest_dir = self.resource_dir / "labels"
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = dest_dir / f"{stem}.txt"
+
+        # 写入 YOLO 格式
+        with open(dest_path, "w", encoding="utf-8") as f:
+            for cid, xc, yc, w, h in boxes:
+                f.write(f"{cid} {xc:.6f} {yc:.6f} {w:.6f} {h:.6f}\n")
+
+        relative_path = str(dest_path.relative_to(self.project_root)).replace("\\", "/")
+        line_count = len(boxes)
+        entry = {
+            "path": relative_path,
+            "file_size": dest_path.stat().st_size,
+            "line_count": line_count,
+            "imported_at": datetime.now().isoformat(),
+        }
+        name = f"{stem}.txt"
+        self._registry.setdefault("labels", {})[name] = entry
+        self._save_registry()
+        return LabelInfo(
+            name=name, path=relative_path,
+            file_size=entry["file_size"], line_count=line_count,
+            imported_at=datetime.now(),
+        )
+
     def extract_frames(self, video_path, interval=15, output_dir=None, max_frames=None):
         video_path = Path(video_path)
         if not video_path.exists():
