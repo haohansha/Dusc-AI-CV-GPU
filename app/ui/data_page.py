@@ -625,6 +625,7 @@ class DataPage(QWidget):
             QMessageBox.warning(self, "提示", "当前没有图片素材可标注，请先导入图片或抽帧")
             return
         dialog = LabelEditorDialog(self.project_root, self.dataset_manager, self)
+        dialog.showMaximized()
         if dialog.exec_() == QDialog.Accepted:
             self._refresh_media()
 

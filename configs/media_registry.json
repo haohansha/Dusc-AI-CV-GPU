@@ -1190,11 +1190,17 @@
     }
   },
   "labels": {
+    "VID_20230423_144822_frame_000015.txt": {
+      "path": "resource/labels/VID_20230423_144822_frame_000015.txt",
+      "file_size": 39,
+      "line_count": 1,
+      "imported_at": "2026-07-05T22:30:34.452751"
+    },
     "VID_20230423_144822_frame_000000.txt": {
       "path": "resource/labels/VID_20230423_144822_frame_000000.txt",
-      "file_size": 37,
+      "file_size": 39,
       "line_count": 1,
-      "imported_at": "2026-07-03T20:50:46.609331"
+      "imported_at": "2026-07-06T11:31:15.964944"
     }
   }
 }

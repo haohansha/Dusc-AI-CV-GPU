@@ -2,13 +2,13 @@
 
 from pathlib import Path
 
-from PyQt5.QtCore import Qt, QRect, QPoint, QSize
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QFont, QBrush
+from PyQt5.QtCore import Qt, QRect, QPoint, QSize, QEvent
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QFont, QBrush, QKeySequence
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter, QWidget,
     QListWidget, QListWidget, QListWidgetItem, QLabel, QPushButton,
     QGroupBox, QFormLayout, QComboBox, QDoubleSpinBox, QMessageBox,
-    QScrollArea, QSizePolicy, QFrame, QStatusBar
+    QScrollArea, QSizePolicy, QFrame, QStatusBar, QInputDialog, QShortcut
 )
 
 
@@ -28,14 +28,95 @@ class AnnotationCanvas(QWidget):
         self._end_point = None         # 画布上的终点（像素）
         # 图片显示缩放：画布上实际显示尺寸 / 图片原始尺寸
         self._scale = 1.0
+        # Q键快速标注模式开关
+        self._quick_mode = False
+        # 拉框完成回调（由 dialog 设置）
+        self._on_box_drawn_cb = None
+        self._on_box_clicked_cb = None
+        self._on_clear_selection_cb = None
+        self._on_box_updated_cb = None
+        # 拖动 / 调整大小状态
+        self._drag_mode = None          # None | 'move' | 'resize'
+        self._drag_start_pos = None     # 鼠标按下时的画布坐标
+        self._drag_start_box = None     # 鼠标按下时框的归一化参数 (cid, xc, yc, w, h)
+        # 右下角 handle 大小（像素）
+        self._handle_size = 10
 
         self.setMouseTracking(True)
         self.setMinimumSize(480, 360)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setStyleSheet("QWidget { border: 1px solid #cccccc; }")
+        # 让画布可获取焦点，以便接收 Q 键
+        self.setFocusPolicy(Qt.StrongFocus)
 
     def set_class_names(self, names):
         self._class_names = names
+
+    def set_on_box_drawn(self, callback):
+        """设置拉框完成回调（由 dialog 调用）"""
+        self._on_box_drawn_cb = callback
+
+    def set_on_box_clicked(self, callback):
+        """设置点击已有框的回调（由 dialog 设置）"""
+        self._on_box_clicked_cb = callback
+
+    def set_on_clear_selection(self, callback):
+        """设置点击空白处取消选中的回调（由 dialog 设置）"""
+        self._on_clear_selection_cb = callback
+
+    def set_on_box_updated(self, callback):
+        """设置标注框被拖动/调整大小后的回调（由 dialog 设置）"""
+        self._on_box_updated_cb = callback
+
+    def _hit_test(self, pos):
+        """检测点击位置
+        返回 (idx, hit_type):
+            hit_type='handle' → 点中选中框的右下角 handle
+            hit_type='body'   → 点中某个框的内部
+            hit_type='none'   → 空白
+        """
+        if not self._pixmap:
+            return -1, 'none'
+        offset = self._image_offset()
+        img_w = self._pixmap.width()
+        img_h = self._pixmap.height()
+        # 优先：选中框的右下角 handle
+        if 0 <= self._selected_index < len(self._boxes):
+            cid, xc, yc, w, h = self._boxes[self._selected_index]
+            cx = offset.x() + xc * img_w * self._scale
+            cy = offset.y() + yc * img_h * self._scale
+            bw = w * img_w * self._scale
+            bh = h * img_h * self._scale
+            rect = QRect(int(cx - bw / 2), int(cy - bh / 2), int(bw), int(bh))
+            hs = self._handle_size
+            handle_rect = QRect(rect.right() - hs, rect.bottom() - hs, hs * 2, hs * 2)
+            if handle_rect.contains(pos):
+                return self._selected_index, 'handle'
+        # 然后：任意框内部
+        for idx, (cid, xc, yc, w, h) in enumerate(self._boxes):
+            cx = offset.x() + xc * img_w * self._scale
+            cy = offset.y() + yc * img_h * self._scale
+            bw = w * img_w * self._scale
+            bh = h * img_h * self._scale
+            rect = QRect(int(cx - bw / 2), int(cy - bh / 2), int(bw), int(bh))
+            if rect.contains(pos):
+                return idx, 'body'
+        return -1, 'none'
+
+    def set_quick_mode(self, enabled):
+        """开启/关闭快速标注模式"""
+        self._quick_mode = bool(enabled)
+        if not enabled:
+            # 退出时取消正在拉的框
+            self._drawing = False
+            self._start_point = None
+            self._end_point = None
+        # 改变鼠标光标
+        if self._quick_mode:
+            self.setCursor(Qt.CrossCursor)
+        else:
+            self.unsetCursor()
+        self.update()
 
     def load_image(self, image_path, boxes):
         """加载图片及其标注框"""
@@ -160,6 +241,14 @@ class AnnotationCanvas(QWidget):
             # 类别文字
             name = self._class_names[cid] if 0 <= cid < len(self._class_names) else str(cid)
             painter.drawText(rect.topLeft() - QPoint(0, 4), name)
+            # 选中框：右下角绘制 handle（用于调整大小）
+            if idx == self._selected_index:
+                hs = self._handle_size
+                handle_rect = QRect(rect.right() - hs, rect.bottom() - hs, hs * 2, hs * 2)
+                painter.setBrush(QBrush(QColor(0, 120, 255)))
+                painter.setPen(QPen(QColor(255, 255, 255), 1))
+                painter.drawRect(handle_rect)
+                painter.setBrush(Qt.NoBrush)
 
         # 画当前正在拉的框
         if self._drawing and self._start_point and self._end_point:
@@ -168,22 +257,101 @@ class AnnotationCanvas(QWidget):
             r = QRect(self._start_point, self._end_point).normalized()
             painter.drawRect(r)
 
+        # 快速模式开启时画绿色边框
+        if self._quick_mode:
+            pen = QPen(QColor(0, 180, 0), 3)
+            painter.setPen(pen)
+            painter.drawRect(self.rect().adjusted(1, 1, -2, -2))
+
     # ---------- 鼠标事件 ----------
 
     def mousePressEvent(self, event):
-        if event.button() != Qt.LeftButton or not self._pixmap:
+        if event.button() != Qt.LeftButton:
+            return
+        if not self._pixmap:
+            return
+        idx, hit_type = self._hit_test(event.pos())
+        # 1) 点中选中框的右下角 handle → 开始调整大小
+        if hit_type == 'handle' and idx == self._selected_index:
+            self._drag_mode = 'resize'
+            self._drag_start_pos = event.pos()
+            self._drag_start_box = self._boxes[idx]
+            return
+        # 2) 点中某个框内部
+        if idx >= 0:
+            # 通知 dialog 选中该框
+            if self._on_box_clicked_cb:
+                self._on_box_clicked_cb(idx)
+            # 如果点中的就是当前已选中框，则立即开始拖动
+            if idx == self._selected_index:
+                self._drag_mode = 'move'
+                self._drag_start_pos = event.pos()
+                self._drag_start_box = self._boxes[idx]
+            return
+        # 3) 空白 → 取消选中
+        if self._on_clear_selection_cb:
+            self._on_clear_selection_cb()
+        # 只有快速模式才继续画新框
+        if not self._quick_mode:
             return
         self._drawing = True
         self._start_point = event.pos()
         self._end_point = event.pos()
 
     def mouseMoveEvent(self, event):
-        if self._drawing:
-            self._end_point = event.pos()
+        # 拖动模式：移动选中框
+        if self._drag_mode == 'move' and 0 <= self._selected_index < len(self._boxes):
+            offset = self._image_offset()
+            img_w = self._pixmap.width()
+            img_h = self._pixmap.height()
+            scale_w = max(img_w * self._scale, 1e-9)
+            scale_h = max(img_h * self._scale, 1e-9)
+            dx = (event.pos().x() - self._drag_start_pos.x()) / scale_w
+            dy = (event.pos().y() - self._drag_start_pos.y()) / scale_h
+            cid, xc0, yc0, w, h = self._drag_start_box
+            xc = max(0.0, min(1.0, xc0 + dx))
+            yc = max(0.0, min(1.0, yc0 + dy))
+            self._boxes[self._selected_index] = (cid, xc, yc, w, h)
             self.update()
-        # 状态栏可通过 parent 更新（这里不直接处理，由 dialog 监听）
+            if self._on_box_updated_cb:
+                self._on_box_updated_cb(self._selected_index)
+            return
+        # 拖动模式：调整大小（保持中心点不变，改 w/h）
+        if self._drag_mode == 'resize' and 0 <= self._selected_index < len(self._boxes):
+            offset = self._image_offset()
+            img_w = self._pixmap.width()
+            img_h = self._pixmap.height()
+            cid, xc0, yc0, w0, h0 = self._drag_start_box
+            # 中心点在画布上的像素坐标
+            cx_canvas = offset.x() + xc0 * img_w * self._scale
+            cy_canvas = offset.y() + yc0 * img_h * self._scale
+            # 新右下角 → 新宽高（中心不变，所以宽 = 2 * (right - cx)）
+            new_w_canvas = max(8.0, (event.pos().x() - cx_canvas) * 2)
+            new_h_canvas = max(8.0, (event.pos().y() - cy_canvas) * 2)
+            new_w = new_w_canvas / max(img_w * self._scale, 1e-9)
+            new_h = new_h_canvas / max(img_h * self._scale, 1e-9)
+            new_w = max(0.01, min(1.0, new_w))
+            new_h = max(0.01, min(1.0, new_h))
+            self._boxes[self._selected_index] = (cid, xc0, yc0, new_w, new_h)
+            self.update()
+            if self._on_box_updated_cb:
+                self._on_box_updated_cb(self._selected_index)
+            return
+        # 快速模式画框
+        if not self._quick_mode or not self._drawing:
+            return
+        self._end_point = event.pos()
+        self.update()
 
     def mouseReleaseEvent(self, event):
+        # 结束拖动 / 调整大小
+        if self._drag_mode is not None:
+            self._drag_mode = None
+            self._drag_start_pos = None
+            self._drag_start_box = None
+            return
+        if not self._quick_mode:
+            return
         if event.button() != Qt.LeftButton or not self._drawing:
             return
         self._drawing = False
@@ -225,8 +393,8 @@ class AnnotationCanvas(QWidget):
         self._end_point = None
 
         # 通知 dialog 处理（拉框完成）
-        if hasattr(self.parent(), '_on_box_drawn'):
-            self.parent()._on_box_drawn(xc, yc, w, h)
+        if self._on_box_drawn_cb:
+            self._on_box_drawn_cb(xc, yc, w, h)
 
 
 class LabelEditorDialog(QDialog):
@@ -248,6 +416,7 @@ class LabelEditorDialog(QDialog):
         self._current_image = None
 
         self._setup_ui()
+        self._setup_shortcut()
         self._load_image_list()
 
     # ---------- 初始化 ----------
@@ -292,6 +461,13 @@ class LabelEditorDialog(QDialog):
         nav_row.addWidget(self.btn_prev)
         nav_row.addWidget(self.btn_next)
         left_layout.addLayout(nav_row)
+
+        # 左下角提示
+        self.hint_label = QLabel("使用 Q 键和鼠标进行快速标注")
+        self.hint_label.setStyleSheet("QLabel { color: #888888; font-size: 11px; }")
+        self.hint_label.setWordWrap(True)
+        left_layout.addWidget(self.hint_label)
+
         splitter.addWidget(left_group)
 
         # === 中栏：画布 + 手动输入 ===
@@ -300,29 +476,47 @@ class LabelEditorDialog(QDialog):
 
         self.canvas = AnnotationCanvas(self)
         self.canvas.set_class_names(self._class_names)
+        # 设置拉框完成回调（不能用 parent()，因为画布被 QScrollArea 包裹）
+        self.canvas.set_on_box_drawn(self._on_box_drawn)
+        self.canvas.set_on_box_clicked(self._on_box_clicked)
+        self.canvas.set_on_clear_selection(self._on_clear_selection)
+        self.canvas.set_on_box_updated(self._on_box_updated)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(self.canvas)
         scroll.setMinimumHeight(420)
+        # 快速模式下不响应拖动滚动，避免吞掉画布鼠标事件
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         mid_layout.addWidget(scroll, 1)
 
-        # 手动输入区
-        manual_group = QGroupBox("手动输入（YOLO 归一化坐标）")
+        # 标签详细参数区
+        manual_group = QGroupBox("标签详细参数（YOLO 归一化坐标 0~1，xc/yc=中心点, w/h=宽高）")
         manual_form = QFormLayout(manual_group)
+        # 类别行：下拉框 + 添加按钮
+        class_row = QHBoxLayout()
         self.combo_class = QComboBox()
         for name in self._class_names:
             self.combo_class.addItem(name)
-        manual_form.addRow("类别:", self.combo_class)
+        self.combo_class.currentIndexChanged.connect(self._on_class_changed)
+        class_row.addWidget(self.combo_class, 1)
+
+        self.btn_add_class = QPushButton("+")
+        self.btn_add_class.setFixedWidth(28)
+        self.btn_add_class.setToolTip("添加新类别")
+        self.btn_add_class.clicked.connect(self._on_add_class)
+        class_row.addWidget(self.btn_add_class)
+
+        self.btn_del_class = QPushButton("-")
+        self.btn_del_class.setFixedWidth(28)
+        self.btn_del_class.setToolTip("删除当前类别")
+        self.btn_del_class.clicked.connect(self._on_del_class)
+        class_row.addWidget(self.btn_del_class)
+        manual_form.addRow("类别:", class_row)
 
         coord_row1 = QHBoxLayout()
-        self.spin_xc = QDoubleSpinBox()
-        self.spin_xc.setRange(0.0, 1.0)
-        self.spin_xc.setSingleStep(0.001)
-        self.spin_xc.setDecimals(3)
-        self.spin_yc = QDoubleSpinBox()
-        self.spin_yc.setRange(0.0, 1.0)
-        self.spin_yc.setSingleStep(0.001)
-        self.spin_yc.setDecimals(3)
+        self.spin_xc = self._make_coord_spin()
+        self.spin_yc = self._make_coord_spin()
         coord_row1.addWidget(QLabel("xc:"))
         coord_row1.addWidget(self.spin_xc)
         coord_row1.addWidget(QLabel("yc:"))
@@ -330,23 +524,24 @@ class LabelEditorDialog(QDialog):
         manual_form.addRow(coord_row1)
 
         coord_row2 = QHBoxLayout()
-        self.spin_w = QDoubleSpinBox()
-        self.spin_w.setRange(0.0, 1.0)
-        self.spin_w.setSingleStep(0.001)
-        self.spin_w.setDecimals(3)
-        self.spin_h = QDoubleSpinBox()
-        self.spin_h.setRange(0.0, 1.0)
-        self.spin_h.setSingleStep(0.001)
-        self.spin_h.setDecimals(3)
+        self.spin_w = self._make_coord_spin()
+        self.spin_h = self._make_coord_spin()
         coord_row2.addWidget(QLabel("w:"))
         coord_row2.addWidget(self.spin_w)
         coord_row2.addWidget(QLabel("h:"))
         coord_row2.addWidget(self.spin_h)
         manual_form.addRow(coord_row2)
 
-        self.btn_add_manual = QPushButton("添加")
+        self.btn_add_manual = QPushButton("手动添加")
         self.btn_add_manual.clicked.connect(self._on_add_manual)
-        manual_form.addRow(self.btn_add_manual)
+        self.btn_modify = QPushButton("修改")
+        self.btn_modify.setToolTip("更新当前选中的标注框参数")
+        self.btn_modify.clicked.connect(self._on_modify_box)
+        self.btn_modify.setEnabled(False)  # 初始灰色禁用
+        btn_row_manual = QHBoxLayout()
+        btn_row_manual.addWidget(self.btn_add_manual)
+        btn_row_manual.addWidget(self.btn_modify)
+        manual_form.addRow(btn_row_manual)
 
         mid_layout.addWidget(manual_group)
         splitter.addWidget(mid_group)
@@ -357,6 +552,8 @@ class LabelEditorDialog(QDialog):
         self.box_list = QListWidget()
         self.box_list.setSelectionMode(QListWidget.SingleSelection)
         self.box_list.currentRowChanged.connect(self._on_box_selected)
+        # 安装事件过滤器：点击列表空白处取消选中
+        self.box_list.installEventFilter(self)
         right_layout.addWidget(self.box_list, 1)
 
         self.btn_delete = QPushButton("删除选中")
@@ -393,6 +590,135 @@ class LabelEditorDialog(QDialog):
         btn_row.addWidget(self.btn_cancel)
         layout.addLayout(btn_row)
 
+    # ---------- 事件过滤器：点击列表空白处取消选中 ----------
+
+    def eventFilter(self, obj, event):
+        """监听 box_list 鼠标点击，点击空白处取消选中"""
+        if obj is self.box_list and event.type() == QEvent.MouseButtonPress:
+            if event.button() == Qt.LeftButton:
+                # 检查点击位置是否在某个 item 上
+                item = self.box_list.itemAt(event.pos())
+                if item is None:
+                    # 点击空白处，取消选中
+                    self.box_list.setCurrentRow(-1)
+                    return True  # 消费事件，阻止默认行为
+        return super().eventFilter(obj, event)
+
+    # ---------- Q键快速标注模式 ----------
+
+    def _make_coord_spin(self):
+        """构造坐标输入框：0~1 归一化值，步长 0.05，可手动整段输入"""
+        s = QDoubleSpinBox()
+        s.setRange(0.0, 1.0)
+        s.setSingleStep(0.05)
+        s.setDecimals(3)
+        s.setValue(0.5)
+        # 允许直接输入完整数字（QDoubleSpinBox 默认会替换全选内容）
+        s.setKeyboardTracking(True)
+        return s
+
+    def _setup_shortcut(self):
+        """用 QShortcut 全局监听 Q 键，避免被子控件（QListWidget 搜索）消费"""
+        self.shortcut_q = QShortcut(QKeySequence(Qt.Key_Q), self)
+        # ApplicationShortcut 确保无论哪个子控件聚焦都能触发
+        self.shortcut_q.setContext(Qt.ApplicationShortcut)
+        self.shortcut_q.activated.connect(self._toggle_quick_mode)
+
+    def _toggle_quick_mode(self):
+        new_state = not self.canvas._quick_mode
+        self.canvas.set_quick_mode(new_state)
+        if new_state:
+            cls = self.combo_class.currentText()
+            self.status_bar.showMessage(f"快速标注模式: 开启 | 类别: {cls}")
+            # 让画布获取焦点，确保鼠标事件被画布接收
+            self.canvas.setFocus()
+        else:
+            self.status_bar.showMessage("快速标注模式: 关闭")
+        self._update_quick_hint()
+
+    def _update_quick_hint(self):
+        """更新左下角提示文字"""
+        if self.canvas._quick_mode:
+            self.hint_label.setText("● 快速标注模式: 开启（按 Q 退出）| 类别: " + self.combo_class.currentText())
+            self.hint_label.setStyleSheet("QLabel { color: #2a7d2a; font-weight: bold; font-size: 11px; }")
+        else:
+            self.hint_label.setText("使用 Q 键和鼠标进行快速标注")
+            self.hint_label.setStyleSheet("QLabel { color: #888888; font-size: 11px; }")
+
+    # ---------- 类别管理 ----------
+
+    def _on_add_class(self):
+        """添加新类别，持久化到 configs/predefined_classes.txt"""
+        name, ok = QInputDialog.getText(self, "添加类别", "请输入新类别名称:")
+        if not ok or not name.strip():
+            return
+        name = name.strip()
+        # 去重
+        if name in self._class_names:
+            QMessageBox.information(self, "提示", f"类别 '{name}' 已存在")
+            return
+        # 加入内存列表
+        self._class_names.append(name)
+        self.combo_class.addItem(name)
+        self.combo_class.setCurrentIndex(len(self._class_names) - 1)
+        # 同步到画布的 class_names
+        self.canvas.set_class_names(self._class_names)
+        # 持久化到文件
+        self._save_class_names()
+        self.status_bar.showMessage(f"已添加类别: {name}")
+
+    def _save_class_names(self):
+        """把当前类别列表写回 configs/predefined_classes.txt"""
+        classes_file = self.project_root / "configs" / "predefined_classes.txt"
+        classes_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(classes_file, "w", encoding="utf-8") as f:
+            for name in self._class_names:
+                f.write(name + "\n")
+
+    def _on_del_class(self):
+        """删除当前选中的类别（若被已有标签使用则拒绝）"""
+        if len(self._class_names) <= 1:
+            QMessageBox.warning(self, "提示", "至少需要保留 1 个类别")
+            return
+        idx = self.combo_class.currentIndex()
+        name = self._class_names[idx]
+        # 检查是否有标签使用该 class_id
+        used_in = []
+        for img_name, boxes in self._boxes_map.items():
+            for cid, *_ in boxes:
+                if cid == idx:
+                    used_in.append(img_name)
+                    break
+        if used_in:
+            QMessageBox.warning(
+                self, "无法删除",
+                f"类别 '{name}' 已被 {len(used_in)} 张图片的标注使用，无法删除。\n"
+                f"请先清空或修改这些标注后再删除类别。"
+            )
+            return
+        reply = QMessageBox.question(
+            self, "确认删除",
+            f"确定删除类别 '{name}' 吗？",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+        if reply != QMessageBox.Yes:
+            return
+        # 删除类别
+        del self._class_names[idx]
+        self.combo_class.removeItem(idx)
+        # 同步画布
+        self.canvas.set_class_names(self._class_names)
+        # 持久化
+        self._save_class_names()
+        self.status_bar.showMessage(f"已删除类别: {name}")
+
+    def _on_class_changed(self):
+        """类别下拉切换时：仅更新状态栏和提示（不自动改选中框，需点"修改"）"""
+        self._update_quick_hint()
+        if self.canvas._quick_mode:
+            cls = self.combo_class.currentText()
+            self.status_bar.showMessage(f"快速标注模式: 开启 | 类别: {cls}")
+
     # ---------- 图片列表 ----------
 
     def _load_image_list(self):
@@ -419,6 +745,30 @@ class LabelEditorDialog(QDialog):
         self.canvas.load_image(img_path, boxes)
         self._refresh_box_list()
         self._update_status()
+        # 取消选中 → 触发按钮互斥（"添加"亮起，"修改"灰色）
+        self.box_list.setCurrentRow(-1)
+        # 设置默认"添加"参数：
+        #   有标签 → 与第一个标签一致
+        #   无标签 → smoke + xc/yc/w/h=0.5
+        if boxes:
+            cid, xc, yc, w, h = boxes[0]
+            if 0 <= cid < len(self._class_names):
+                self.combo_class.blockSignals(True)
+                self.combo_class.setCurrentIndex(cid)
+                self.combo_class.blockSignals(False)
+            self.spin_xc.setValue(xc)
+            self.spin_yc.setValue(yc)
+            self.spin_w.setValue(w)
+            self.spin_h.setValue(h)
+        else:
+            if self._class_names:
+                self.combo_class.blockSignals(True)
+                self.combo_class.setCurrentIndex(0)
+                self.combo_class.blockSignals(False)
+            self.spin_xc.setValue(0.5)
+            self.spin_yc.setValue(0.5)
+            self.spin_w.setValue(0.5)
+            self.spin_h.setValue(0.5)
 
     def _on_prev(self):
         row = self.image_list.currentRow()
@@ -444,7 +794,68 @@ class LabelEditorDialog(QDialog):
         self.canvas.set_boxes(boxes)
 
     def _on_box_selected(self, row):
+        """选中右栏标注框时，同步类别下拉框、坐标输入框，并联动按钮启用状态"""
         self.canvas.set_selected(row)
+        # 联动按钮：选中时"修改"亮起"添加"灰色；未选中时反过来
+        selected = row >= 0
+        self.btn_modify.setEnabled(selected)
+        self.btn_add_manual.setEnabled(not selected)
+        if row < 0 or not self._current_image:
+            return
+        boxes = self._boxes_map.get(self._current_image.name, [])
+        if row >= len(boxes):
+            return
+        cid, xc, yc, w, h = boxes[row]
+        # 同步类别下拉框（临时阻塞信号，避免触发 _on_class_changed）
+        if 0 <= cid < len(self._class_names):
+            self.combo_class.blockSignals(True)
+            self.combo_class.setCurrentIndex(cid)
+            self.combo_class.blockSignals(False)
+        # 同步坐标输入框
+        self.spin_xc.setValue(xc)
+        self.spin_yc.setValue(yc)
+        self.spin_w.setValue(w)
+        self.spin_h.setValue(h)
+
+    def _on_box_clicked(self, idx):
+        """画布点击已有框时，同步选中右栏列表"""
+        self.box_list.setCurrentRow(idx)
+
+    def _on_clear_selection(self):
+        """画布点击空白处时，取消选中右栏列表"""
+        self.box_list.setCurrentRow(-1)
+
+    def _on_box_updated(self, idx):
+        """画布上拖动/调整大小过程中，同步数据到 _boxes_map 并刷新输入区"""
+        if not self._current_image:
+            return
+        boxes = self._boxes_map.get(self._current_image.name, [])
+        if idx < 0 or idx >= len(boxes):
+            return
+        # 从画布读取最新的框参数
+        canvas_boxes = self.canvas.get_boxes()
+        if idx >= len(canvas_boxes):
+            return
+        cid, xc, yc, w, h = canvas_boxes[idx]
+        boxes[idx] = (cid, xc, yc, w, h)
+        self._dirty.add(self._current_image.name)
+        # 同步输入区（用户拖动时能看到参数实时变化）
+        if 0 <= cid < len(self._class_names):
+            self.combo_class.blockSignals(True)
+            self.combo_class.setCurrentIndex(cid)
+            self.combo_class.blockSignals(False)
+        self.spin_xc.setValue(xc)
+        self.spin_yc.setValue(yc)
+        self.spin_w.setValue(w)
+        self.spin_h.setValue(h)
+        # 只更新当前行的文字（不 clear 整个列表，避免 currentRowChanged 循环和性能问题）
+        if 0 <= idx < self.box_list.count():
+            name = self._class_names[cid] if 0 <= cid < len(self._class_names) else str(cid)
+            text = f"{name}  xc={xc:.3f} yc={yc:.3f} w={w:.3f} h={h:.3f}"
+            item = self.box_list.item(idx)
+            if item:
+                item.setText(text)
+        self._update_status()
 
     def _on_box_drawn(self, xc, yc, w, h):
         """AnnotationCanvas 拉框完成时回调"""
@@ -455,6 +866,9 @@ class LabelEditorDialog(QDialog):
         boxes.append((cid, xc, yc, w, h))
         self._dirty.add(self._current_image.name)
         self._refresh_box_list()
+        # 自动选中新画的标签，方便用户立即修改
+        new_idx = len(boxes) - 1
+        self.box_list.setCurrentRow(new_idx)
         self._update_status()
 
     def _on_add_manual(self):
@@ -474,6 +888,29 @@ class LabelEditorDialog(QDialog):
         self._dirty.add(self._current_image.name)
         self._refresh_box_list()
         self._update_status()
+
+    def _on_modify_box(self):
+        """用当前输入区的值更新选中的标注框"""
+        row = self.box_list.currentRow()
+        if row < 0 or not self._current_image:
+            return
+        boxes = self._boxes_map.get(self._current_image.name, [])
+        if row >= len(boxes):
+            return
+        new_cid = self.combo_class.currentIndex()
+        new_xc = self.spin_xc.value()
+        new_yc = self.spin_yc.value()
+        new_w = self.spin_w.value()
+        new_h = self.spin_h.value()
+        if new_w <= 0 or new_h <= 0:
+            QMessageBox.warning(self, "提示", "宽度和高度必须大于 0")
+            return
+        boxes[row] = (new_cid, new_xc, new_yc, new_w, new_h)
+        self._dirty.add(self._current_image.name)
+        self._refresh_box_list()
+        # 重新选中（_refresh_box_list 会清空选中）
+        self.box_list.setCurrentRow(row)
+        self.status_bar.showMessage(f"已更新标注框 #{row + 1}")
 
     def _on_delete_box(self):
         if not self._current_image:

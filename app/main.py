@@ -36,7 +36,7 @@ def main():
 
     try:
         window = MainWindow(config)
-        window.show()
+        window.showMaximized()
         sys.exit(app.exec_())
     except Exception as e:
         QMessageBox.critical(None, "启动错误", f"应用程序启动失败:\n{str(e)}")

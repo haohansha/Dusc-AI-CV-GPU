@@ -293,18 +293,29 @@ class DatasetManager:
         return results
 
     def save_label_for_image(self, image_name, boxes):
-        """保存图片的标签到 resource/labels/<stem>.txt，覆盖原有内容
+        """保存图片的标签到 resource/labels/<stem>.txt
+
+        当 boxes 为空时，删除对应的 .txt 文件并从 registry 移除（表示该图片无标注）。
 
         Args:
             image_name: 图片文件名，如 "smoke_01.jpg"
             boxes: list of (class_id, xc, yc, w, h) 归一化坐标
         Returns:
-            LabelInfo
+            LabelInfo 或 None（删除时返回 None）
         """
         stem = Path(image_name).stem
         dest_dir = self.resource_dir / "labels"
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / f"{stem}.txt"
+        name = f"{stem}.txt"
+
+        # 标签为空 → 删除文件 + 从 registry 移除
+        if not boxes:
+            if dest_path.exists():
+                dest_path.unlink()
+            self._registry.get("labels", {}).pop(name, None)
+            self._save_registry()
+            return None
 
         # 写入 YOLO 格式
         with open(dest_path, "w", encoding="utf-8") as f:
@@ -319,7 +330,6 @@ class DatasetManager:
             "line_count": line_count,
             "imported_at": datetime.now().isoformat(),
         }
-        name = f"{stem}.txt"
         self._registry.setdefault("labels", {})[name] = entry
         self._save_registry()
         return LabelInfo(
