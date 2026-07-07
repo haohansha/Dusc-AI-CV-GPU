@@ -17,7 +17,6 @@ class ModelListWidget(QWidget):
     model_selected = pyqtSignal(dict)
     model_double_clicked = pyqtSignal(dict)
     import_clicked = pyqtSignal()
-    download_clicked = pyqtSignal()
     refresh_clicked = pyqtSignal()
     compare_clicked = pyqtSignal(dict, dict)
     delete_requested = pyqtSignal(str)
@@ -25,31 +24,29 @@ class ModelListWidget(QWidget):
 
     COLUMNS = ["名称", "类型", "类别数", "大小", "创建时间", "状态"]
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, show_toolbar=True):
         super().__init__(parent)
         self._models_data = []
+        self._show_toolbar = show_toolbar
         self._setup_ui()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        toolbar_layout = QHBoxLayout()
+        if self._show_toolbar:
+            toolbar_layout = QHBoxLayout()
 
-        self._import_btn = QPushButton("导入模型")
-        self._import_btn.clicked.connect(self.import_clicked)
-        toolbar_layout.addWidget(self._import_btn)
+            self._import_btn = QPushButton("导入模型")
+            self._import_btn.clicked.connect(self.import_clicked)
+            toolbar_layout.addWidget(self._import_btn)
 
-        self._download_btn = QPushButton("下载默认模型")
-        self._download_btn.clicked.connect(self.download_clicked)
-        toolbar_layout.addWidget(self._download_btn)
+            self._refresh_btn = QPushButton("刷新")
+            self._refresh_btn.clicked.connect(self.refresh_clicked)
+            toolbar_layout.addWidget(self._refresh_btn)
 
-        self._refresh_btn = QPushButton("刷新")
-        self._refresh_btn.clicked.connect(self.refresh_clicked)
-        toolbar_layout.addWidget(self._refresh_btn)
-
-        toolbar_layout.addStretch()
-        layout.addLayout(toolbar_layout)
+            toolbar_layout.addStretch()
+            layout.addLayout(toolbar_layout)
 
         self._table = QTableWidget()
         self._table.setColumnCount(len(self.COLUMNS))

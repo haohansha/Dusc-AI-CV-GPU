@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
 
         toolbar.addAction("导入模型").triggered.connect(lambda: self._tab_widget.setCurrentIndex(0))
         toolbar.addAction("导入素材").triggered.connect(lambda: self._tab_widget.setCurrentIndex(1))
-        toolbar.addAction("开始训练").triggered.connect(lambda: self._tab_widget.setCurrentIndex(2))
+        toolbar.addAction("开始训练").triggered.connect(lambda: self._tab_widget.setCurrentIndex(0))
 
     def _init_status_bar(self):
         statusbar = self.statusBar()
@@ -99,24 +99,20 @@ class MainWindow(QMainWindow):
     def _init_central_widget(self):
         from app.ui.model_page import ModelPage
         from app.ui.data_page import DataPage
-        from app.ui.train_page import TrainPage
         from app.ui.inference_page import InferencePage
         from app.ui.deploy_page import DeployPage
 
         self._tab_widget = QTabWidget()
         self.setCentralWidget(self._tab_widget)
 
-        self.tab_model = ModelPage(self._project_root, self._model_manager)
+        self.tab_model = ModelPage(
+            self._project_root, self._model_manager,
+            self._dataset_manager, train_engine=None
+        )
         self._tab_widget.addTab(self.tab_model, "模型管理")
 
         self.tab_data = DataPage(self._project_root, self._dataset_manager)
         self._tab_widget.addTab(self.tab_data, "数据管理")
-
-        self.tab_train = TrainPage(
-            self._project_root, None,
-            self._model_manager, self._dataset_manager
-        )
-        self._tab_widget.addTab(self.tab_train, "微调训练")
 
         self.tab_inference = InferencePage(
             self._project_root, self._inference_engine,

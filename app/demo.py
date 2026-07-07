@@ -5,6 +5,8 @@ UI 排版重构 Demo —— 纯界面展示，无业务逻辑。
 """
 import sys
 import os
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 # 必须在 PyQt5 之前 import torch（DLL 加载修复）—— Demo 为纯UI，不依赖 torch
@@ -14,9 +16,8 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QSplitter, QPushButton, QLabel, QListWidget, QListWidgetItem,
     QTableWidget, QTableWidgetItem, QGroupBox, QFormLayout, QComboBox,
-    QRadioButton, QButtonGroup, QSpinBox, QDoubleSpinBox, QSlider,
-    QProgressBar, QTextEdit, QCheckBox, QAbstractItemView, QHeaderView,
-    QMessageBox, QFrame, QSizePolicy, QScrollArea
+    QRadioButton, QButtonGroup, QSlider,
+    QMessageBox, QAbstractItemView, QHeaderView
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QColor, QPainter, QPen, QBrush
@@ -50,259 +51,97 @@ class DataManagementPage(QWidget):
 
 
 # ============================================================
-# 页面二：模型管理（上半模型列表+详情，下半可折叠微调训练）
+# 页面二：模型管理（使用真实 ModelPage，Demo 用 mock ModelManager 避免 torch 依赖）
 # ============================================================
+class _MockModelInfo:
+    """Demo 用轻量 ModelInfo，不依赖 ultralytics / torch"""
+    def __init__(self, name, path, model_type, num_classes, class_names=None,
+                 file_size=0, created_at="", status="ready", metrics=None):
+        self.name = name
+        self.path = path
+        self.model_type = model_type
+        self.num_classes = num_classes
+        self.class_names = class_names or []
+        self.file_size = file_size
+        self.created_at = created_at
+        self.status = status
+        self.metrics = metrics or {}
+
+
+class _DemoModelManager:
+    """Demo 用 mock 模型管理器，提供真实 ModelPage 所需的接口"""
+    def __init__(self, project_root):
+        self.project_root = Path(project_root)
+        models_dir = self.project_root / "models"
+        models_dir.mkdir(parents=True, exist_ok=True)
+        self._models = []
+
+    def list_models(self):
+        return self._models
+
+    def scan_models_dir(self):
+        """扫描 models/ 目录，注册 .pt 文件"""
+        models_dir = self.project_root / "models"
+        self._models.clear()
+        if models_dir.exists():
+            for pt_file in sorted(models_dir.glob("*.pt")):
+                stat = pt_file.stat()
+                self._models.append(_MockModelInfo(
+                    name=pt_file.name,
+                    path=str(pt_file),
+                    model_type="imported",
+                    num_classes=0,
+                    file_size=stat.st_size,
+                    created_at=datetime.fromtimestamp(stat.st_ctime).strftime("%Y-%m-%d %H:%M"),
+                    status="ready",
+                ))
+
+    def import_model(self, file_path: Path):
+        """复制模型文件到 models/ 目录"""
+        file_path = Path(file_path)
+        if not file_path.exists():
+            return None
+        dest = self.project_root / "models" / file_path.name
+        if dest.exists() and dest.samefile(file_path):
+            self.scan_models_dir()
+            for m in self._models:
+                if m.name == file_path.name:
+                    return m
+            return None
+        shutil.copy2(str(file_path), str(dest))
+        self.scan_models_dir()
+        for m in self._models:
+            if m.name == file_path.name:
+                return m
+        return None
+
+    def remove_model(self, name: str):
+        """删除模型文件"""
+        model_path = self.project_root / "models" / name
+        if model_path.exists():
+            model_path.unlink()
+            self.scan_models_dir()
+            return True
+        return False
+
+
 class ModelManagementPage(QWidget):
+    """Demo 包装器：用真实 ModelPage + mock ModelManager + 真实 DatasetManager"""
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._models_data = [
-            {"name": "yolov8n.pt", "type": "预训练", "classes": 80, "size": "6.2MB",
-             "date": "2025-01-15", "status": "就绪",
-             "path": "models/yolov8n.pt", "arch": "YOLOv8", "cls_names": "coco 80类",
-             "mAP": "0.37"},
-            {"name": "smoke_best.pt", "type": "微调", "classes": 1, "size": "6.1MB",
-             "date": "2025-01-20", "status": "就绪",
-             "path": "models/smoke_best.pt", "arch": "YOLOv8", "cls_names": "smoke",
-             "mAP": "0.85"},
-            {"name": "factory.pt", "type": "导入", "classes": 1, "size": "6.1MB",
-             "date": "2025-01-22", "status": "就绪",
-             "path": "models/factory.pt", "arch": "YOLOv8", "cls_names": "smoke",
-             "mAP": "-"},
-        ]
-        self._setup_ui()
-        self._load_models()
+        from app.ui.model_page import ModelPage
+        from modules.dataset_manager import DatasetManager
 
-    def _setup_ui(self):
+        project_root = Path(__file__).parent.parent
+        model_mgr = _DemoModelManager(project_root)
+        model_mgr.scan_models_dir()
+        dataset_mgr = DatasetManager(project_root)
+
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(10)
-
-        # 顶部按钮栏（唯一一组）
-        btn_row = QHBoxLayout()
-        self.btn_import = QPushButton("导入模型")
-        self.btn_download = QPushButton("下载默认模型")
-        self.btn_refresh = QPushButton("刷新")
-        self.btn_compare = QPushButton("模型对比")
-        for btn in (self.btn_import, self.btn_download, self.btn_refresh, self.btn_compare):
-            btn_row.addWidget(btn)
-        btn_row.addStretch()
-        layout.addLayout(btn_row)
-
-        # 上下分割
-        splitter = QSplitter(Qt.Vertical)
-
-        # 上半区：模型列表 + 详情
-        upper = QWidget()
-        upper_layout = QVBoxLayout(upper)
-        upper_layout.setContentsMargins(0, 0, 0, 0)
-
-        upper_layout.addWidget(QLabel("模型列表"))
-        self.model_table = QTableWidget()
-        self.model_table.setColumnCount(6)
-        self.model_table.setHorizontalHeaderLabels(
-            ["名称", "类型", "类别数", "大小", "创建时间", "状态"]
-        )
-        self.model_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.model_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.model_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.model_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.model_table.itemSelectionChanged.connect(self._on_model_selected)
-        upper_layout.addWidget(self.model_table)
-
-        detail_group = QGroupBox("模型详情")
-        detail_form = QFormLayout(detail_group)
-        self.lbl_detail_path = QLabel("-")
-        self.lbl_detail_arch = QLabel("-")
-        self.lbl_detail_classes = QLabel("-")
-        self.lbl_detail_mAP = QLabel("-")
-        for lbl in (self.lbl_detail_path, self.lbl_detail_arch,
-                    self.lbl_detail_classes, self.lbl_detail_mAP):
-            lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        detail_form.addRow("路径:", self.lbl_detail_path)
-        detail_form.addRow("架构:", self.lbl_detail_arch)
-        detail_form.addRow("类别列表:", self.lbl_detail_classes)
-        detail_form.addRow("mAP:", self.lbl_detail_mAP)
-        upper_layout.addWidget(detail_group)
-
-        splitter.addWidget(upper)
-
-        # 下半区：可折叠微调训练面板
-        self.train_container = QWidget()
-        train_outer = QVBoxLayout(self.train_container)
-        train_outer.setContentsMargins(0, 0, 0, 0)
-
-        # 折叠标题栏
-        title_row = QHBoxLayout()
-        self.btn_toggle_train = QPushButton("▼ 微调训练")
-        self.btn_toggle_train.setFlat(True)
-        self.btn_toggle_train.setStyleSheet(
-            "QPushButton { text-align: left; font-weight: bold; padding: 6px; }"
-        )
-        self.btn_toggle_train.clicked.connect(self._toggle_train_panel)
-        title_row.addWidget(self.btn_toggle_train)
-        title_row.addStretch()
-        train_outer.addLayout(title_row)
-
-        # 训练面板内容
-        self.train_panel = QWidget()
-        train_layout = QVBoxLayout(self.train_panel)
-        train_layout.setContentsMargins(8, 4, 8, 4)
-
-        # 左右两列
-        cols = QHBoxLayout()
-
-        # 左列：数据源 + 基础模型
-        left_col = QGroupBox("数据源")
-        left_layout = QVBoxLayout(left_col)
-        self.radio_default = QRadioButton("使用默认数据集")
-        self.radio_imported = QRadioButton("使用导入素材")
-        self.radio_default.setChecked(True)
-        self.data_source_group = QButtonGroup(self)
-        self.data_source_group.addButton(self.radio_default, 0)
-        self.data_source_group.addButton(self.radio_imported, 1)
-        left_layout.addWidget(self.radio_default)
-        left_layout.addWidget(self.radio_imported)
-
-        left_layout.addWidget(QLabel("基础模型:"))
-        self.combo_base_model = QComboBox()
-        self.combo_base_model.addItems(["yolov8n.pt", "smoke_best.pt", "factory.pt"])
-        left_layout.addWidget(self.combo_base_model)
-        left_layout.addStretch()
-        cols.addWidget(left_col)
-
-        # 右列：训练参数
-        right_col = QGroupBox("训练参数")
-        right_form = QFormLayout(right_col)
-        self.spin_epochs = QSpinBox()
-        self.spin_epochs.setRange(1, 500)
-        self.spin_epochs.setValue(50)
-        right_form.addRow("训练轮数:", self.spin_epochs)
-
-        self.spin_batch = QSpinBox()
-        self.spin_batch.setRange(1, 128)
-        self.spin_batch.setValue(8)
-        right_form.addRow("批次:", self.spin_batch)
-
-        self.spin_lr = QDoubleSpinBox()
-        self.spin_lr.setRange(0.00001, 0.1)
-        self.spin_lr.setDecimals(5)
-        self.spin_lr.setSingleStep(0.00001)
-        self.spin_lr.setValue(0.0001)
-        right_form.addRow("学习率:", self.spin_lr)
-
-        self.spin_imgsz = QSpinBox()
-        self.spin_imgsz.setRange(320, 1280)
-        self.spin_imgsz.setSingleStep(32)
-        self.spin_imgsz.setValue(640)
-        right_form.addRow("尺寸:", self.spin_imgsz)
-
-        self.btn_advanced = QPushButton("高级选项 ▼")
-        self.btn_advanced.clicked.connect(self._toggle_advanced)
-        right_form.addRow(self.btn_advanced)
-
-        self.advanced_panel = QWidget()
-        adv_form = QFormLayout(self.advanced_panel)
-        self.combo_optimizer = QComboBox()
-        self.combo_optimizer.addItems(["AdamW", "SGD", "Adam"])
-        adv_form.addRow("优化器:", self.combo_optimizer)
-        self.spin_warmup = QSpinBox()
-        self.spin_warmup.setRange(0, 10)
-        self.spin_warmup.setValue(2)
-        adv_form.addRow("预热轮数:", self.spin_warmup)
-        self.spin_patience = QSpinBox()
-        self.spin_patience.setRange(1, 50)
-        self.spin_patience.setValue(15)
-        adv_form.addRow("早停耐心:", self.spin_patience)
-        self.chk_cos_lr = QCheckBox("余弦学习率")
-        self.chk_cos_lr.setChecked(True)
-        adv_form.addRow("", self.chk_cos_lr)
-        self.advanced_panel.setVisible(False)
-        right_form.addRow(self.advanced_panel)
-
-        cols.addWidget(right_col)
-        train_layout.addLayout(cols)
-
-        # 训练控制
-        ctrl_row = QHBoxLayout()
-        self.btn_start_train = QPushButton("开始训练")
-        self.btn_start_train.setStyleSheet(
-            "QPushButton { background-color: #4CAF50; color: white; font-weight: bold; padding: 6px 20px; }"
-        )
-        self.btn_stop_train = QPushButton("停止训练")
-        self.btn_stop_train.setEnabled(False)
-        self.btn_stop_train.setStyleSheet(
-            "QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 6px 20px; }"
-        )
-        ctrl_row.addWidget(self.btn_start_train)
-        ctrl_row.addWidget(self.btn_stop_train)
-        ctrl_row.addStretch()
-        train_layout.addLayout(ctrl_row)
-
-        # 进度条
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setValue(60)
-        self.progress_bar.setFormat("训练中... 30/50 (60%)")
-        train_layout.addWidget(self.progress_bar)
-
-        # 日志面板
-        self.log_text = QTextEdit()
-        self.log_text.setReadOnly(True)
-        self.log_text.setMaximumHeight(120)
-        self.log_text.setFont(QFont("Courier New", 20))
-        self.log_text.setHtml(
-            '<span style="color:#000000;">[10:30:01] [INFO] 开始训练...</span><br>'
-            '<span style="color:#000000;">[10:30:15] [INFO] Epoch 1/50 完成</span><br>'
-            '<span style="color:#008000;">[10:30:30] [SUCCESS] 训练完成！mAP: 0.85</span>'
-        )
-        train_layout.addWidget(self.log_text)
-
-        train_outer.addWidget(self.train_panel)
-        splitter.addWidget(self.train_container)
-
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
-        splitter.setSizes([400, 300])
-        layout.addWidget(splitter)
-
-        # 连接占位信号
-        self.btn_import.clicked.connect(lambda: _placeholder(self, "导入模型"))
-        self.btn_download.clicked.connect(lambda: _placeholder(self, "下载默认模型"))
-        self.btn_refresh.clicked.connect(lambda: _placeholder(self, "刷新"))
-        self.btn_compare.clicked.connect(lambda: _placeholder(self, "模型对比"))
-        self.btn_start_train.clicked.connect(lambda: _placeholder(self, "开始训练"))
-        self.btn_stop_train.clicked.connect(lambda: _placeholder(self, "停止训练"))
-
-    def _load_models(self):
-        self.model_table.setRowCount(len(self._models_data))
-        for row, m in enumerate(self._models_data):
-            self.model_table.setItem(row, 0, QTableWidgetItem(m["name"]))
-            self.model_table.setItem(row, 1, QTableWidgetItem(m["type"]))
-            self.model_table.setItem(row, 2, QTableWidgetItem(str(m["classes"])))
-            self.model_table.setItem(row, 3, QTableWidgetItem(m["size"]))
-            self.model_table.setItem(row, 4, QTableWidgetItem(m["date"]))
-            self.model_table.setItem(row, 5, QTableWidgetItem(m["status"]))
-
-    def _on_model_selected(self):
-        rows = set(item.row() for item in self.model_table.selectedItems())
-        if not rows:
-            return
-        row = min(rows)
-        if row < len(self._models_data):
-            m = self._models_data[row]
-            self.lbl_detail_path.setText(m["path"])
-            self.lbl_detail_arch.setText(m["arch"])
-            self.lbl_detail_classes.setText(m["cls_names"])
-            self.lbl_detail_mAP.setText(m["mAP"])
-
-    def _toggle_train_panel(self):
-        visible = self.train_panel.isVisible()
-        self.train_panel.setVisible(not visible)
-        self.btn_toggle_train.setText("▲ 微调训练" if not visible else "▼ 微调训练")
-
-    def _toggle_advanced(self):
-        visible = self.advanced_panel.isVisible()
-        self.advanced_panel.setVisible(not visible)
-        self.btn_advanced.setText("高级选项 ▲" if not visible else "高级选项 ▼")
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self._page = ModelPage(project_root, model_mgr, dataset_mgr)
+        layout.addWidget(self._page)
 
 
 # ============================================================
