@@ -21,6 +21,11 @@ class MediaInfo:
     file_size: int
     imported_at: datetime
     has_labels: bool
+    categories: list = None  # 素材分类归属，如 ["微调用", "测试用"]
+
+    def __post_init__(self):
+        if self.categories is None:
+            self.categories = []
 
 
 @dataclass
@@ -601,4 +606,53 @@ class DatasetManager:
             file_size=entry.get("file_size", 0),
             imported_at=datetime.fromisoformat(entry["imported_at"]) if isinstance(entry["imported_at"], str) else entry["imported_at"],
             has_labels=entry.get("has_labels", False),
+            categories=entry.get("categories", []),
         )
+
+    # ---------- 素材分类管理 ----------
+
+    def list_categories(self):
+        """返回所有分类名列表"""
+        return list(self._registry.get("categories", []))
+
+    def add_category(self, name):
+        """新建分类，重名则忽略"""
+        cats = self._registry.setdefault("categories", [])
+        if name not in cats:
+            cats.append(name)
+            self._save_registry()
+
+    def rename_category(self, old_name, new_name):
+        """重命名分类，同步更新所有素材的 categories 字段"""
+        cats = self._registry.get("categories", [])
+        if old_name not in cats:
+            return
+        idx = cats.index(old_name)
+        cats[idx] = new_name
+        for entry in self._registry.get("media", {}).values():
+            if old_name in entry.get("categories", []):
+                entry["categories"] = [new_name if c == old_name else c
+                                       for c in entry["categories"]]
+        self._save_registry()
+
+    def delete_category(self, name):
+        """删除分类，同步从所有素材移除"""
+        cats = self._registry.get("categories", [])
+        if name in cats:
+            cats.remove(name)
+        for entry in self._registry.get("media", {}).values():
+            if name in entry.get("categories", []):
+                entry["categories"].remove(name)
+        self._save_registry()
+
+    def set_media_categories(self, media_name, categories):
+        """设置单个素材的分类列表（覆盖式）"""
+        entry = self._registry.get("media", {}).get(media_name)
+        if entry is None:
+            return
+        entry["categories"] = list(categories)
+        self._save_registry()
+
+    def list_media_by_category(self, category):
+        """返回属于指定分类的所有 MediaInfo"""
+        return [m for m in self.list_media() if category in m.categories]

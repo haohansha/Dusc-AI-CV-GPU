@@ -20,7 +20,10 @@
       "frame_count": 1,
       "file_size": 534956,
       "imported_at": "2026-07-03T20:51:03.502082",
-      "has_labels": false
+      "has_labels": false,
+      "categories": [
+        "测试微调"
+      ]
     },
     "VID_20230423_144822_frame_000015.jpg": {
       "path": "resource/images/VID_20230423_144822_frame_000015.jpg",
@@ -31,7 +34,10 @@
       "frame_count": 1,
       "file_size": 528193,
       "imported_at": "2026-07-03T20:51:03.502082",
-      "has_labels": false
+      "has_labels": false,
+      "categories": [
+        "测试微调"
+      ]
     },
     "VID_20230423_144822_frame_000030.jpg": {
       "path": "resource/images/VID_20230423_144822_frame_000030.jpg",
@@ -42,7 +48,10 @@
       "frame_count": 1,
       "file_size": 526940,
       "imported_at": "2026-07-03T20:51:03.502082",
-      "has_labels": false
+      "has_labels": false,
+      "categories": [
+        "测试微调"
+      ]
     },
     "VID_20230423_144822_frame_000045.jpg": {
       "path": "resource/images/VID_20230423_144822_frame_000045.jpg",
@@ -64,7 +73,10 @@
       "frame_count": 1,
       "file_size": 484838,
       "imported_at": "2026-07-03T20:51:03.503082",
-      "has_labels": false
+      "has_labels": false,
+      "categories": [
+        "测试微调"
+      ]
     },
     "VID_20230423_144822_frame_000075.jpg": {
       "path": "resource/images/VID_20230423_144822_frame_000075.jpg",
@@ -75,7 +87,10 @@
       "frame_count": 1,
       "file_size": 489359,
       "imported_at": "2026-07-03T20:51:03.503082",
-      "has_labels": false
+      "has_labels": false,
+      "categories": [
+        "测试微调"
+      ]
     },
     "VID_20230423_144822_frame_000090.jpg": {
       "path": "resource/images/VID_20230423_144822_frame_000090.jpg",
@@ -86,7 +101,10 @@
       "frame_count": 1,
       "file_size": 449225,
       "imported_at": "2026-07-03T20:51:03.503082",
-      "has_labels": false
+      "has_labels": false,
+      "categories": [
+        "测试微调"
+      ]
     },
     "VID_20230423_144822_frame_000105.jpg": {
       "path": "resource/images/VID_20230423_144822_frame_000105.jpg",
@@ -1190,17 +1208,44 @@
     }
   },
   "labels": {
-    "VID_20230423_144822_frame_000015.txt": {
-      "path": "resource/labels/VID_20230423_144822_frame_000015.txt",
-      "file_size": 39,
-      "line_count": 1,
-      "imported_at": "2026-07-05T22:30:34.452751"
-    },
     "VID_20230423_144822_frame_000000.txt": {
       "path": "resource/labels/VID_20230423_144822_frame_000000.txt",
       "file_size": 39,
       "line_count": 1,
-      "imported_at": "2026-07-06T11:31:15.964944"
+      "imported_at": "2026-07-07T11:31:21.962181"
+    },
+    "VID_20230423_144822_frame_000015.txt": {
+      "path": "resource/labels/VID_20230423_144822_frame_000015.txt",
+      "file_size": 39,
+      "line_count": 1,
+      "imported_at": "2026-07-07T11:31:27.743048"
+    },
+    "VID_20230423_144822_frame_000030.txt": {
+      "path": "resource/labels/VID_20230423_144822_frame_000030.txt",
+      "file_size": 39,
+      "line_count": 1,
+      "imported_at": "2026-07-07T11:31:33.554231"
+    },
+    "VID_20230423_144822_frame_000060.txt": {
+      "path": "resource/labels/VID_20230423_144822_frame_000060.txt",
+      "file_size": 39,
+      "line_count": 1,
+      "imported_at": "2026-07-07T11:31:40.863701"
+    },
+    "VID_20230423_144822_frame_000075.txt": {
+      "path": "resource/labels/VID_20230423_144822_frame_000075.txt",
+      "file_size": 39,
+      "line_count": 1,
+      "imported_at": "2026-07-07T11:31:46.097133"
+    },
+    "VID_20230423_144822_frame_000090.txt": {
+      "path": "resource/labels/VID_20230423_144822_frame_000090.txt",
+      "file_size": 39,
+      "line_count": 1,
+      "imported_at": "2026-07-07T11:31:54.015991"
     }
-  }
+  },
+  "categories": [
+    "测试微调"
+  ]
 }

@@ -9,6 +9,7 @@ from PyQt5.QtGui import QPixmap, QImage
 import cv2
 
 from app.ui.label_editor_dialog import LabelEditorDialog
+from app.ui.pack_dialog import PackDialog
 
 
 class DataPage(QWidget):
@@ -61,6 +62,10 @@ class DataPage(QWidget):
         self.btn_annotate = QPushButton("添加标签")
         self.btn_annotate.clicked.connect(self._on_annotate)
         btn_row.addWidget(self.btn_annotate)
+
+        self.btn_pack = QPushButton("素材打包")
+        self.btn_pack.clicked.connect(self._on_pack)
+        btn_row.addWidget(self.btn_pack)
 
         btn_row.addStretch()
         layout.addLayout(btn_row)
@@ -313,6 +318,9 @@ class DataPage(QWidget):
         else:  # 图片才显示已标注（动态查询标签注册表）
             has_lbl = self.dataset_manager.has_label_for(m.name)
             lines.append(f"已标注: {'是' if has_lbl else '否'}")
+        # 显示素材分类归属
+        cats = getattr(m, 'categories', None) or []
+        lines.append(f"分类: {', '.join(cats) if cats else '无'}")
         lines.append(f"导入时间: {m.imported_at}")
         self.info_label.setText("\n".join(lines))
 
@@ -628,6 +636,13 @@ class DataPage(QWidget):
         dialog.showMaximized()
         if dialog.exec_() == QDialog.Accepted:
             self._refresh_media()
+
+    def _on_pack(self):
+        """打开素材打包对话框"""
+        dialog = PackDialog(self.project_root, self.dataset_manager, self)
+        dialog.showMaximized()
+        dialog.exec_()
+        self._refresh_media()
 
     # ---------- 外部接口 ----------
 
