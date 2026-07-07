@@ -9,7 +9,6 @@ from PyQt5.QtGui import QPixmap, QImage
 import cv2
 
 from app.ui.label_editor_dialog import LabelEditorDialog
-from app.ui.pack_dialog import PackDialog
 
 
 class DataPage(QWidget):
@@ -63,10 +62,6 @@ class DataPage(QWidget):
         self.btn_annotate.clicked.connect(self._on_annotate)
         btn_row.addWidget(self.btn_annotate)
 
-        self.btn_pack = QPushButton("素材打包")
-        self.btn_pack.clicked.connect(self._on_pack)
-        btn_row.addWidget(self.btn_pack)
-
         btn_row.addStretch()
         layout.addLayout(btn_row)
 
@@ -86,14 +81,23 @@ class DataPage(QWidget):
         self.video_list.customContextMenuRequested.connect(self._on_video_context_menu)
         left_layout.addWidget(self.video_list, 1)
 
-        # 图片素材区
-        left_layout.addWidget(QLabel("图片素材"))
-        self.image_list = QListWidget()
-        self.image_list.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.image_list.currentRowChanged.connect(self._on_image_selected)
-        self.image_list.customContextMenuRequested.connect(self._on_image_context_menu)
-        left_layout.addWidget(self.image_list, 1)
+        # 已标注图片区
+        left_layout.addWidget(QLabel("已标注图片"))
+        self.image_labeled_list = QListWidget()
+        self.image_labeled_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.image_labeled_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.image_labeled_list.currentRowChanged.connect(self._on_image_selected)
+        self.image_labeled_list.customContextMenuRequested.connect(self._on_image_context_menu)
+        left_layout.addWidget(self.image_labeled_list, 1)
+
+        # 未标注图片区
+        left_layout.addWidget(QLabel("未标注图片"))
+        self.image_unlabeled_list = QListWidget()
+        self.image_unlabeled_list.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.image_unlabeled_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.image_unlabeled_list.currentRowChanged.connect(self._on_image_selected)
+        self.image_unlabeled_list.customContextMenuRequested.connect(self._on_image_context_menu)
+        left_layout.addWidget(self.image_unlabeled_list, 1)
 
         # 标签管理区
         left_layout.addWidget(QLabel("标签管理"))
@@ -111,7 +115,7 @@ class DataPage(QWidget):
         mid_layout = QVBoxLayout(mid_group)
         self.preview_label = QLabel("请选择左侧素材进行预览")
         self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setMinimumSize(480, 360)
+        self.preview_label.setMinimumSize(480, 468)
         self.preview_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.preview_label.setStyleSheet(
             "QLabel { border: 1px solid #cccccc; background-color: #fafafa; color: #888888; }"
@@ -129,13 +133,36 @@ class DataPage(QWidget):
             "QLabel { padding: 8px; background: #f5f5f5; border-radius: 4px; }"
         )
         right_layout.addWidget(self.info_label)
-        right_layout.addStretch()
+
+        # 分类管理 GroupBox
+        cat_group = QGroupBox("分类管理")
+        cat_layout = QVBoxLayout(cat_group)
+        cat_btn_row = QHBoxLayout()
+        self.btn_new_cat = QPushButton("新建")
+        self.btn_new_cat.clicked.connect(self._on_new_category)
+        self.btn_rename_cat = QPushButton("重命名")
+        self.btn_rename_cat.clicked.connect(self._on_rename_category)
+        self.btn_del_cat = QPushButton("删除")
+        self.btn_del_cat.clicked.connect(self._on_delete_category)
+        cat_btn_row.addWidget(self.btn_new_cat)
+        cat_btn_row.addWidget(self.btn_rename_cat)
+        cat_btn_row.addWidget(self.btn_del_cat)
+        cat_layout.addLayout(cat_btn_row)
+        self.cat_list = QListWidget()
+        self.cat_list.itemChanged.connect(self._on_cat_check_changed)
+        cat_layout.addWidget(self.cat_list, 1)
+        self.cat_stats_label = QLabel("")
+        self.cat_stats_label.setStyleSheet("QLabel { color: #666; font-size: 11px; }")
+        self.cat_stats_label.setWordWrap(True)
+        cat_layout.addWidget(self.cat_stats_label)
+        right_layout.addWidget(cat_group)
+
         splitter.addWidget(right_group)
 
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 3)
         splitter.setStretchFactor(2, 1)
-        splitter.setSizes([250, 600, 200])
+        splitter.setSizes([300, 700, 300])
         layout.addWidget(splitter)
 
         # 底部状态栏
@@ -153,7 +180,8 @@ class DataPage(QWidget):
     def _refresh_media(self):
         """从 DatasetManager 重新加载媒体列表，统一编号（视频在前，图片在后）"""
         self.video_list.clear()
-        self.image_list.clear()
+        self.image_labeled_list.clear()
+        self.image_unlabeled_list.clear()
         self.label_list.clear()
 
         media_list = self.dataset_manager.list_media()
@@ -169,11 +197,24 @@ class DataPage(QWidget):
             self.video_list.addItem(item)
             idx += 1
 
+        # 图片按已标注/未标注拆分到两个列表（统一编号继续递增）
+        labeled_count = 0
+        unlabeled_count = 0
         for m in images:
-            item = QListWidgetItem(f"{idx:03d}. {m.name}")
-            item.setData(Qt.UserRole, m)
-            item.setData(Qt.UserRole + 1, idx)
-            self.image_list.addItem(item)
+            has_lbl = self.dataset_manager.has_label_for(m.name)
+            if has_lbl:
+                cats_str = f"  [{', '.join(m.categories)}]" if m.categories else ""
+                item = QListWidgetItem(f"{idx:03d}. {m.name}{cats_str}")
+                item.setData(Qt.UserRole, m)
+                item.setData(Qt.UserRole + 1, idx)
+                self.image_labeled_list.addItem(item)
+                labeled_count += 1
+            else:
+                item = QListWidgetItem(f"{idx:03d}. {m.name}")
+                item.setData(Qt.UserRole, m)
+                item.setData(Qt.UserRole + 1, idx)
+                self.image_unlabeled_list.addItem(item)
+                unlabeled_count += 1
             idx += 1
 
         # 标签列表（独立编号，与视频/图片编号不连续）
@@ -191,13 +232,15 @@ class DataPage(QWidget):
         label_count = len(labels)
         total = video_count + image_count
         self.status_label.setText(
-            f"共 {total} 个素材 | 视频: {video_count} | 图片: {image_count} | 标签: {label_count} | 当前: 无选择"
+            f"共 {total} 个素材 | 视频: {video_count} | 图片: {image_count} (已标注 {labeled_count}/未标注 {unlabeled_count}) | 标签: {label_count} | 当前: 无选择"
         )
         self._current_media = None
         self._current_label = None
         self.preview_label.clear()
         self.preview_label.setText("请选择左侧素材进行预览")
         self.info_label.setText("未选择素材")
+        # 刷新分类列表与统计
+        self._refresh_cat_list()
         self.media_changed.emit()
 
     # ---------- 选择处理 ----------
@@ -205,8 +248,9 @@ class DataPage(QWidget):
     def _on_video_selected(self, row):
         if row < 0:
             return
-        # 取消另外两个列表的选择
-        self.image_list.setCurrentRow(-1)
+        # 取消另外三个列表的选择
+        self.image_labeled_list.setCurrentRow(-1)
+        self.image_unlabeled_list.setCurrentRow(-1)
         self.label_list.setCurrentRow(-1)
         item = self.video_list.item(row)
         if not item:
@@ -215,37 +259,56 @@ class DataPage(QWidget):
         self._current_media = m
         self._show_preview(m)
         self._show_info(m)
+        self._clear_cat_checkstate()
+        total_img = self.image_labeled_list.count() + self.image_unlabeled_list.count()
         self.status_label.setText(
-            f"共 {self.video_list.count() + self.image_list.count()} 个素材 | "
-            f"视频: {self.video_list.count()} | 图片: {self.image_list.count()} | "
+            f"共 {self.video_list.count() + total_img} 个素材 | "
+            f"视频: {self.video_list.count()} | 图片: {total_img} | "
             f"标签: {self.label_list.count()} | 当前: {m.name} (视频)"
         )
 
     def _on_image_selected(self, row):
         if row < 0:
             return
-        # 取消另外两个列表的选择
-        self.video_list.setCurrentRow(-1)
-        self.label_list.setCurrentRow(-1)
-        item = self.image_list.item(row)
+        # 判断来自哪个 list
+        list_widget = self.sender()
+        if list_widget is self.image_labeled_list:
+            item = self.image_labeled_list.item(row)
+        elif list_widget is self.image_unlabeled_list:
+            item = self.image_unlabeled_list.item(row)
+        else:
+            return  # 来自其他列表，忽略
         if not item:
             return
         m = item.data(Qt.UserRole)
         self._current_media = m
         self._show_preview(m)
         self._show_info(m)
+        # 取消另外三个列表的选择
+        self.video_list.setCurrentRow(-1)
+        self.label_list.setCurrentRow(-1)
+        if list_widget is self.image_labeled_list:
+            self.image_unlabeled_list.setCurrentRow(-1)
+            self._refresh_cat_checkstate(m)
+            tag = "已标注图片"
+        else:
+            self.image_labeled_list.setCurrentRow(-1)
+            self._clear_cat_checkstate()
+            tag = "未标注图片"
+        total_img = self.image_labeled_list.count() + self.image_unlabeled_list.count()
         self.status_label.setText(
-            f"共 {self.video_list.count() + self.image_list.count()} 个素材 | "
-            f"视频: {self.video_list.count()} | 图片: {self.image_list.count()} | "
-            f"标签: {self.label_list.count()} | 当前: {m.name} (图片)"
+            f"共 {self.video_list.count() + total_img} 个素材 | "
+            f"视频: {self.video_list.count()} | 图片: {total_img} | "
+            f"标签: {self.label_list.count()} | 当前: {m.name} ({tag})"
         )
 
     def _on_label_selected(self, row):
         if row < 0:
             return
-        # 取消另外两个列表的选择
+        # 取消另外三个列表的选择
         self.video_list.setCurrentRow(-1)
-        self.image_list.setCurrentRow(-1)
+        self.image_labeled_list.setCurrentRow(-1)
+        self.image_unlabeled_list.setCurrentRow(-1)
         item = self.label_list.item(row)
         if not item:
             return
@@ -254,9 +317,11 @@ class DataPage(QWidget):
         self._current_label = lbl
         self._show_label_preview(lbl)
         self._show_label_info(lbl)
+        self._clear_cat_checkstate()
+        total_img = self.image_labeled_list.count() + self.image_unlabeled_list.count()
         self.status_label.setText(
-            f"共 {self.video_list.count() + self.image_list.count()} 个素材 | "
-            f"视频: {self.video_list.count()} | 图片: {self.image_list.count()} | "
+            f"共 {self.video_list.count() + total_img} 个素材 | "
+            f"视频: {self.video_list.count()} | 图片: {total_img} | "
             f"标签: {self.label_list.count()} | 当前: {lbl.name} (标签)"
         )
 
@@ -367,14 +432,15 @@ class DataPage(QWidget):
         menu.exec_(self.video_list.viewport().mapToGlobal(pos))
 
     def _on_image_context_menu(self, pos):
-        item = self.image_list.itemAt(pos)
+        list_widget = self.sender()
+        item = list_widget.itemAt(pos)
         if not item:
             return
         menu = QMenu(self)
         delete_action = QAction("批量删除", self)
         delete_action.triggered.connect(self._on_delete)
         menu.addAction(delete_action)
-        menu.exec_(self.image_list.viewport().mapToGlobal(pos))
+        menu.exec_(list_widget.viewport().mapToGlobal(pos))
 
     def _on_label_context_menu(self, pos):
         item = self.label_list.itemAt(pos)
@@ -486,7 +552,7 @@ class DataPage(QWidget):
     def _on_delete(self):
         """批量删除：选择类型（视频/图片/标签），指定起止编号，直接删除"""
         video_count = self.video_list.count()
-        image_count = self.image_list.count()
+        image_count = self.image_labeled_list.count() + self.image_unlabeled_list.count()
         label_count = self.label_list.count()
         if video_count == 0 and image_count == 0 and label_count == 0:
             QMessageBox.warning(self, "提示", "当前没有素材可删除")
@@ -558,13 +624,13 @@ class DataPage(QWidget):
 
         # 根据类型收集目标
         if rb_video.isChecked():
-            target_list = self.video_list
+            target_lists = [self.video_list]
             is_label = False
         elif rb_image.isChecked():
-            target_list = self.image_list
+            target_lists = [self.image_labeled_list, self.image_unlabeled_list]
             is_label = False
         else:
-            target_list = self.label_list
+            target_lists = [self.label_list]
             is_label = True
 
         start = start_spin.value()
@@ -573,12 +639,13 @@ class DataPage(QWidget):
             start, end = end, start
 
         targets = []
-        for i in range(target_list.count()):
-            item = target_list.item(i)
-            idx = item.data(Qt.UserRole + 1)
-            if start <= idx <= end:
-                obj = item.data(Qt.UserRole)
-                targets.append((idx, obj.name))
+        for target_list in target_lists:
+            for i in range(target_list.count()):
+                item = target_list.item(i)
+                idx = item.data(Qt.UserRole + 1)
+                if start <= idx <= end:
+                    obj = item.data(Qt.UserRole)
+                    targets.append((idx, obj.name))
 
         if not targets:
             QMessageBox.information(self, "提示", "指定编号范围内没有素材")
@@ -637,12 +704,116 @@ class DataPage(QWidget):
         if dialog.exec_() == QDialog.Accepted:
             self._refresh_media()
 
-    def _on_pack(self):
-        """打开素材打包对话框"""
-        dialog = PackDialog(self.project_root, self.dataset_manager, self)
-        dialog.showMaximized()
-        dialog.exec_()
-        self._refresh_media()
+    # ---------- 分类管理 ----------
+
+    def _refresh_cat_list(self, checked_names=None, enabled=True):
+        """刷新分类列表，保留勾选状态，并可控制列表是否可用"""
+        if checked_names is None:
+            checked_names = set()
+        self.cat_list.blockSignals(True)
+        self.cat_list.clear()
+        for cat in self.dataset_manager.list_categories():
+            item = QListWidgetItem(cat)
+            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+            item.setCheckState(Qt.Checked if cat in checked_names else Qt.Unchecked)
+            self.cat_list.addItem(item)
+        self.cat_list.blockSignals(False)
+        self.cat_list.setEnabled(enabled)
+        self._update_cat_stats()
+
+    def _refresh_cat_checkstate(self, m):
+        """选中已标注图片时，刷新分类勾选状态，启用列表"""
+        cats = m.categories or []
+        self._refresh_cat_list(set(cats), enabled=True)
+
+    def _clear_cat_checkstate(self):
+        """未标注图片/视频/标签时，清空勾选，禁用列表"""
+        self._refresh_cat_list(set(), enabled=False)
+
+    def _on_cat_check_changed(self, item):
+        """勾选/取消勾选分类时，立即保存到所有选中的已标注图片（支持 Shift 多选批量打勾）"""
+        # 收集所有选中的已标注图片
+        selected_items = self.image_labeled_list.selectedItems()
+        if not selected_items:
+            return
+        # 收集当前所有勾选的分类
+        checked = []
+        for i in range(self.cat_list.count()):
+            it = self.cat_list.item(i)
+            if it.checkState() == Qt.Checked:
+                checked.append(it.text())
+        # 批量保存到每张选中的已标注图片
+        for sel_item in selected_items:
+            m = sel_item.data(Qt.UserRole)
+            if not self.dataset_manager.has_label_for(m.name):
+                continue  # 未标注图片不参与分类
+            self.dataset_manager.set_media_categories(m.name, checked)
+            m.categories = list(checked)
+            # 更新列表项显示
+            self._refresh_image_labeled_item_text(m.name, checked)
+        # 更新媒体信息区（显示当前 currentItem）
+        if self._current_media:
+            self._show_info(self._current_media)
+        self._update_cat_stats()
+
+    def _update_cat_stats(self):
+        cats = self.dataset_manager.list_categories()
+        labeled_count = self.image_labeled_list.count()
+        lines = [f"已标注图片: {labeled_count} 张 | 分类数: {len(cats)}"]
+        for cat in cats:
+            count = len(self.dataset_manager.list_media_by_category(cat))
+            lines.append(f"  · {cat}: {count} 张")
+        self.cat_stats_label.setText("\n".join(lines))
+
+    def _refresh_image_labeled_item_text(self, name, categories):
+        """更新已标注图片列表中指定项的文本（追加分类后缀）"""
+        for i in range(self.image_labeled_list.count()):
+            item = self.image_labeled_list.item(i)
+            m = item.data(Qt.UserRole)
+            if m.name == name:
+                cats_str = f"  [{', '.join(categories)}]" if categories else ""
+                item.setText(f"{i+1:03d}. {name}{cats_str}")
+                break
+
+    def _on_new_category(self):
+        name, ok = QInputDialog.getText(self, "新建分类", "分类名称:")
+        if ok and name.strip():
+            name = name.strip()
+            self.dataset_manager.add_category(name)
+            # 保留当前选中素材的勾选状态
+            checked = set()
+            if self._current_media and self._current_media.media_type == "image":
+                checked = set(self._current_media.categories or [])
+            self._refresh_cat_list(checked)
+
+    def _on_rename_category(self):
+        current = self.cat_list.currentItem()
+        if not current:
+            QMessageBox.information(self, "提示", "请先选择要重命名的分类")
+            return
+        old_name = current.text()
+        new_name, ok = QInputDialog.getText(self, "重命名分类", "新名称:", text=old_name)
+        if ok and new_name.strip() and new_name.strip() != old_name:
+            self.dataset_manager.rename_category(old_name, new_name.strip())
+            self._refresh_media()
+            if self._current_media:
+                self._refresh_cat_checkstate(self._current_media)
+
+    def _on_delete_category(self):
+        current = self.cat_list.currentItem()
+        if not current:
+            QMessageBox.information(self, "提示", "请先选择要删除的分类")
+            return
+        name = current.text()
+        reply = QMessageBox.question(
+            self, "确认删除",
+            f"确定删除分类 '{name}' 吗？\n素材本身不会被删除，仅移除分类归属。"
+        )
+        if reply == QMessageBox.Yes:
+            self.dataset_manager.delete_category(name)
+            self._refresh_media()
+            if self._current_media:
+                self._refresh_cat_checkstate(self._current_media)
 
     # ---------- 外部接口 ----------
 

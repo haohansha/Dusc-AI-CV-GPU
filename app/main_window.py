@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         self._model_manager.scan_models_dir()
 
         self.setWindowTitle("工业烟雾AI视觉识别与管理平台")
-        self.setMinimumSize(1200, 800)
+        self.setMinimumSize(1200, 1040)
 
         self._init_menu_bar()
         self._init_toolbar()
