@@ -65,6 +65,38 @@
       }
     },
     {
+      "id": "page-model-management-v2",
+      "title": "模型管理 v2",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1782783600000,
+      "canvasData": {
+        "x": 0,
+        "y": 377,
+        "group": 1
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/model-management-v2.html",
+        "interactions": [
+          {
+            "domId": "tab-data",
+            "targetPageId": "page-data-management",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-inference",
+            "targetPageId": "page-inference",
+            "hideEdge": true
+          },
+          {
+            "domId": "tab-jetson",
+            "targetPageId": "page-jetson-deploy",
+            "hideEdge": true
+          }
+        ]
+      }
+    },
+    {
       "id": "page-inference",
       "title": "推理检测",
       "type": "page",

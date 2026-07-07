@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dusc AI CV · 铸造车间智能烟雾调控系统</title>
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #131829;
+    --bg-card: #1a2138;
+    --bg-elevated: #232b45;
+    --border: #2d3554;
+    --border-soft: #3d4570;
+    --text-primary: #e8ecf4;
+    --text-secondary: #9ca3b8;
+    --text-muted: #6b7290;
+    --accent: #00d4ff;
+    --accent-glow: rgba(0, 212, 255, 0.4);
+    --warm: #ff6b35;
+    --warm-glow: rgba(255, 107, 53, 0.35);
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #ef4444;
+    --gradient-1: linear-gradient(135deg, #00d4ff 0%, #6366f1 100%);
+    --gradient-2: linear-gradient(135deg, #ff6b35 0%, #ef4444 100%);
+    --gradient-3: linear-gradient(135deg, #4ade80 0%, #06b6d4 100%);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* 装饰性背景 */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at 15% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 40%),
+      radial-gradient(ellipse at 85% 70%, rgba(255, 107, 53, 0.06) 0%, transparent 45%),
+      radial-gradient(ellipse at 50% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ===== Hero 区 ===== */
+  .hero {
+    text-align: center;
+    padding: 80px 20px 60px;
+    position: relative;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 999px;
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 24px;
+  }
+
+  .hero-badge::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent-glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .hero-title {
+    font-size: 52px;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #9ca3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-title .accent {
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: 20px;
+    color: var(--text-secondary);
+    max-width: 760px;
+    margin: 0 auto 36px;
+    line-height: 1.5;
+  }
+
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    flex-wrap: wrap;
+    margin-top: 40px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 36px;
+    font-weight: 800;
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-family: "SF Mono", "Consolas", monospace;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ===== Section 通用 ===== */
+  section {
+    margin: 80px 0;
+    scroll-margin-top: 40px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .section-num {
+    width: 36px; height: 36px;
+    background: var(--gradient-1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    color: white;
+    box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+  }
+
+  .section-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  /* ===== 卡片 ===== */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    border-color: var(--border-soft);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+
+  .card-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* ===== 网格 ===== */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .hero-title { font-size: 36px; }
+    .hero-stats { gap: 24px; }
+  }
+
+  /* ===== 痛点对比 ===== */
+  .pain-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .pain-box {
+    padding: 18px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .pain-box.before {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+  }
+
+  .pain-box.after {
+    background: rgba(74, 222, 128, 0.08);
+    border: 1px solid rgba(74, 222, 128, 0.25);
+    color: #86efac;
+  }
+
+  .pain-arrow {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 22px;
+  }
+
+  /* ===== 架构图 ===== */
+  .arch-diagram {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 20px;
+    margin: 24px 0;
+  }
+
+  .arch-flow {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .arch-node {
+    flex: 1;
+    min-width: 180px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+  }
+
+  .arch-node.camera { border-top: 3px solid var(--accent); }
+  .arch-node.edge { border-top: 3px solid var(--warm); }
+  .arch-node.fan { border-top: 3px solid var(--success); }
+  .arch-node.train { border-top: 3px solid #a78bfa; }
+
+  .arch-node-icon {
+    font-size: 32px;
+    margin-bottom: 10px;
+  }
+
+  .arch-node-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .arch-node-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .arch-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 24px;
+  }
+
+  @media (max-width: 768px) {
+    .arch-flow { flex-direction: column; }
+    .arch-arrow { transform: rotate(90deg); justify-content: center; padding: 8px 0; }
+  }
+
+  /* ===== 价值卡片 ===== */
+  .value-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .value-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .value-card.business::before { background: var(--gradient-1); }
+  .value-card.efficiency::before { background: var(--gradient-3); }
+  .value-card.social::before { background: var(--gradient-2); }
+
+  .value-tag {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .value-card.business .value-tag { background: rgba(0, 212, 255, 0.15); color: var(--accent); }
+  .value-card.efficiency .value-tag { background: rgba(74, 222, 128, 0.15); color: var(--success); }
+  .value-card.social .value-tag { background: rgba(255, 107, 53, 0.15); color: var(--warm); }
+
+  .value-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .value-list {
+    list-style: none;
+    margin-top: 16px;
+  }
+
+  .value-list li {
+    padding: 8px 0;
+    padding-left: 24px;
+    position: relative;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .value-list li::before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+
+  /* ===== 技术栈 ===== */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .tech-pill {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .tech-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tech-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .tech-version {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: "SF Mono", monospace;
+    margin-top: 2px;
+  }
+
+  /* ===== 性能指标 ===== */
+  .metrics {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+    margin-top: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .metric {
+    text-align: center;
+    padding: 16px;
+    background: var(--bg-elevated);
+    border-radius: 12px;
+  }
+
+  .metric-value {
+    font-size: 28px;
+    font-weight: 800;
+    font-family: "SF Mono", monospace;
+    background: var(--gradient-1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .metric-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* ===== Footer ===== */
+  footer {
+    margin-top: 100px;
+    padding: 40px 0;
+    text-align: center;
+    border-top: 1px solid var(--border);
+  }
+
+  footer p {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+
+  footer .tag {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0 4px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ===== Hero ===== -->
+  <header class="hero">
+    <div class="hero-badge">全流程 GUI 平台 · 数据 → 训练 → 部署</div>
+    <h1 class="hero-title">
+      Dusc AI CV<br>
+      <span class="accent">嵌入式 AI 视觉全流程开发平台</span>
+    </h1>
+    <p class="hero-subtitle">
+      一套覆盖数据管理、模型训练、推理验证、边缘部署的桌面 GUI 软件，把原本散落在十几个工具里的嵌入式 AI 开发流程串成一条流水线——让从零到部署 Jetson Nano 的全过程，在一个窗口里完成。
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-value">5</div>
+        <div class="stat-label">核心功能模块</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">1 个</div>
+        <div class="stat-label">窗口替代多工具</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">YOLOv8</div>
+        <div class="stat-label">原生支持主流模型</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">Jetson</div>
+        <div class="stat-label">一键导出 TensorRT</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== 1. 创意介绍 ===== -->
+  <section id="creative">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2 class="section-title">创意介绍</h2>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-icon" style="background: rgba(0, 212, 255, 0.15); color: var(--accent);">🎯</div>
+        <div class="card-title">想解决什么问题</div>
+        <div class="card-desc">
+          降低 Jetson Nano 的 AI 视觉识别嵌入式开发难度。围绕 Nano 做一个视觉项目，本应聚焦模型本身，实际上却被一堆琐碎的工程流程拖住：收集数据要手动复制整理、标注要切到 labelImg、训练要敲命令行、模型验证要写脚本、最后部署到 Nano 还要跨平台导出 TensorRT 引擎、CSI 摄像头管道还要单独适配。市面上找不到一个软件能把这些步骤串起来，新手往往卡在"流程"而不是"算法"上。
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-icon" style="background: rgba(255, 107, 53, 0.15); color: var(--warm);">💡</div>
+        <div class="card-title">为什么会想到做这个</div>
+        <div class="card-desc">
+          项目原本是要做一个用于调控工厂通风系统的烟雾识别模型。但在开发过程中，我反复在不同工具之间切换：这里收数据、那里标注、再开终端训练、再写脚本部署 Nano——每一步都在打断思路。市面上虽有 Ultralytics、labelImg、TensorRT 各自的工具，却没有一个能"端到端"覆盖嵌入式视觉开发全流程的集成环境。于是我决定把这套流程自己封装成一个软件，让后来者不必再走一遍老路。
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <div class="card-icon" style="background: rgba(99, 102, 241, 0.15); color: #a78bfa;">🚀</div>
+      <div class="card-title">大概是什么产品</div>
+      <div class="card-desc">
+        一套 <strong>Windows 桌面端 GUI 软件（PyQt5）</strong>，内置五大模块：① 数据管理（统一 resource 目录 + 视频抽帧 + 内置 labelImg 风格标注编辑器）；② 模型管理（权重注册 + 版本信息）；③ 训练引擎（YOLOv8 配置可视化 + 一键启动 GPU 训练）；④ 推理验证（图片/视频/摄像头实时推理）；⑤ 边缘部署（Jetson Nano 环境检测 + TensorRT 引擎导出引导 + CSI 摄像头配置）。原本需要十几个工具交替完成的工作，现在一个窗口搞定。
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 2. 目标用户及痛点 ===== -->
+  <section id="users">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2 class="section-title">目标用户及痛点</h2>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-icon" style="background: rgba(0, 212, 255, 0.15); color: var(--accent);">👨‍🎓</div>
+        <div class="card-title">AI 算法初学者</div>
+        <div class="card-desc">
+          刚学完 YOLOv8 理论，想动手做一个完整项目，却被数据收集、标注格式、训练脚本、TensorRT 导出等工程细节卡住，迟迟跑不通端到端流程。
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: rgba(255, 107, 53, 0.15); color: var(--warm);">🔧</div>
+        <div class="card-title">嵌入式开发工程师</div>
+        <div class="card-desc">
+          需要把 PC 上训练好的模型部署到 Jetson Nano，但跨平台环境配置、TensorRT 引擎导出、CSI 摄像头适配等环节文档零散，反复踩坑。
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: rgba(74, 222, 128, 0.15); color: var(--success);">🏭</div>
+        <div class="card-title">工业 AI 方案商</div>
+        <div class="card-desc">
+          为工厂定制视觉方案，希望有一套可复用的开发底座，避免每个项目都从零搭建数据管理和部署流程，缩短交付周期。
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin: 36px 0 16px; font-size: 16px; color: var(--text-secondary);">使用场景</h3>
+    <div class="card">
+      <div class="card-desc">
+        <strong>从零开始做项目</strong>：打开软件 → 扫描文件夹批量导入素材 → 视频自动抽帧 → 内置标注编辑器画框 → 一键启动训练 → 模型自动注册 → 推理验证效果 → 导出 TensorRT 部署 Jetson，全程不离开主窗口；<br>
+        <strong>迭代优化模型</strong>：在新场景采集数据后，直接在数据管理页补充标注、增量训练，旧模型版本可对比；<br>
+        <strong>跨平台部署</strong>：在 Windows 上完成训练和验证，导出 .pt 模型后拷贝到 Jetson Nano，软件引导本地生成 TensorRT 引擎并测试 CSI 摄像头。
+      </div>
+    </div>
+
+    <h3 style="margin: 36px 0 16px; font-size: 16px; color: var(--text-secondary);">当前痛点（无本软件时）</h3>
+    <div class="pain-row">
+      <div class="pain-box before">
+        <strong>工具分散</strong>：数据用文件管理器整理、标注切到 labelImg、训练开终端、验证写脚本，反复切换打断思路
+      </div>
+      <div class="pain-arrow">→</div>
+      <div class="pain-box after">
+        <strong>一站集成</strong>：五大模块统一窗口，数据→训练→部署一条流水线
+      </div>
+    </div>
+    <div class="pain-row">
+      <div class="pain-box before">
+        <strong>流程零散</strong>：数据散落各处，模型版本无登记，部署到 Nano 时环境参数全靠手动记录
+      </div>
+      <div class="pain-arrow">→</div>
+      <div class="pain-box after">
+        <strong>统一管理</strong>：resource 目录集中存素材，模型注册表追踪版本，Jetson 参数全局配置
+      </div>
+    </div>
+    <div class="pain-row">
+      <div class="pain-box before">
+        <strong>门槛高</strong>：GStreamer 管道、TensorRT 跨平台、CSI 摄像头适配等坑点，新手往往卡几天
+      </div>
+      <div class="pain-arrow">→</div>
+      <div class="pain-box after">
+        <strong>引导式部署</strong>：环境检测脚本 + 参数预设 + 部署文档，按步骤即可完成
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 3. 系统架构 ===== -->
+  <section id="arch">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2 class="section-title">软件功能架构</h2>
+    </div>
+
+    <div class="arch-diagram">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="display: inline-block; padding: 12px 28px; background: var(--bg-elevated); border: 1px solid var(--border-soft); border-radius: 12px; border-top: 3px solid #a78bfa;">
+          <div style="font-size: 14px; font-weight: 600; color: var(--text-primary);">Dusc AI CV 主窗口（PyQt5）</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">左侧导航 · 多页签切换 · 全局配置</div>
+        </div>
+      </div>
+
+      <div class="arch-flow">
+        <div class="arch-node camera">
+          <div class="arch-node-icon">📁</div>
+          <div class="arch-node-title">① 数据管理</div>
+          <div class="arch-node-desc">resource 统一目录<br>视频抽帧 + 标注编辑器</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node edge">
+          <div class="arch-node-icon">🧠</div>
+          <div class="arch-node-title">② 模型管理</div>
+          <div class="arch-node-desc">权重注册 + 版本追踪<br>训练超参数配置</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node fan">
+          <div class="arch-node-icon">🎯</div>
+          <div class="arch-node-title">③ 训练引擎</div>
+          <div class="arch-node-desc">YOLOv8 可视化配置<br>GPU 一键启动训练</div>
+        </div>
+      </div>
+
+      <div class="arch-flow" style="margin-top: 16px;">
+        <div class="arch-node camera">
+          <div class="arch-node-icon">🔍</div>
+          <div class="arch-node-title">④ 推理验证</div>
+          <div class="arch-node-desc">图片/视频/摄像头<br>实时检测 + 结果可视化</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node edge">
+          <div class="arch-node-icon">🚀</div>
+          <div class="arch-node-title">⑤ 边缘部署</div>
+          <div class="arch-node-desc">Jetson 环境检测<br>TensorRT 引擎导出引导</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node fan">
+          <div class="arch-node-icon">Nano</div>
+          <div class="arch-node-title">Jetson 设备</div>
+          <div class="arch-node-desc">CSI 摄像头实时推理<br>视频自动归档</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 4. 价值与意义 ===== -->
+  <section id="value">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <h2 class="section-title">价值与意义</h2>
+    </div>
+
+    <div class="grid-2">
+      <div class="value-card efficiency">
+        <span class="value-tag">效率提升</span>
+        <div class="value-title">把"十几个工具"压成"一个窗口"</div>
+        <ul class="value-list">
+          <li>数据管理、标注、训练、推理、部署五大环节在一个 GUI 内完成，不再频繁切换工具</li>
+          <li>内置 labelImg 风格标注编辑器，支持 Q 键快速画框、拖动调整、参数手动修改，标注效率成倍提升</li>
+          <li>统一 resource 目录 + 媒体注册表，视频抽帧自动入库，告别手动整理文件夹</li>
+          <li>训练配置可视化，超参数不再需要手敲 yaml，一键启动 GPU 训练并实时查看日志</li>
+        </ul>
+      </div>
+
+      <div class="value-card social">
+        <span class="value-tag">降低门槛</span>
+        <div class="value-title">让嵌入式 AI 开发"可复制、可教、可上手"</div>
+        <ul class="value-list">
+          <li>把 Ultralytics、labelImg、TensorRT、GStreamer 等零散工具封装成统一体验，新手无需逐一学习</li>
+          <li>Jetson Nano 部署引导：环境检测脚本 + 参数预设 + 部署文档，按步骤即可完成跨平台部署</li>
+          <li>CSI 摄像头管道、TensorRT 引擎本地导出等坑点已内置解决方案，避免反复踩坑</li>
+          <li>方案可复用于火焰、粉尘、缺陷检测等任何 YOLOv8 视觉任务，具备教学和工程推广价值</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 5. 技术栈 ===== -->
+  <section id="tech">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <h2 class="section-title">技术栈与性能</h2>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom: 4px;">核心技术选型</div>
+      <div class="card-desc" style="margin-bottom: 8px;">从训练到部署的端到端 AI 工程化实践</div>
+      <div class="tech-grid">
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: #ef4444;"></div>
+          <div>
+            <div class="tech-name">PyTorch</div>
+            <div class="tech-version">2.11.0 + cu128</div>
+          </div>
+        </div>
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: #a78bfa;"></div>
+          <div>
+            <div class="tech-name">Ultralytics YOLOv8</div>
+            <div class="tech-version">8.4.57</div>
+          </div>
+        </div>
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: var(--accent);"></div>
+          <div>
+            <div class="tech-name">PyQt5</div>
+            <div class="tech-version">GUI 平台</div>
+          </div>
+        </div>
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: var(--success);"></div>
+          <div>
+            <div class="tech-name">OpenCV</div>
+            <div class="tech-version">4.x</div>
+          </div>
+        </div>
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: var(--warm);"></div>
+          <div>
+            <div class="tech-name">TensorRT</div>
+            <div class="tech-version">边缘加速</div>
+          </div>
+        </div>
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: #fbbf24;"></div>
+          <div>
+            <div class="tech-name">GStreamer</div>
+            <div class="tech-version">CSI 摄像头</div>
+          </div>
+        </div>
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: #06b6d4;"></div>
+          <div>
+            <div class="tech-name">SQLite</div>
+            <div class="tech-version">事件存储</div>
+          </div>
+        </div>
+        <div class="tech-pill">
+          <div class="tech-dot" style="background: #f472b6;"></div>
+          <div>
+            <div class="tech-name">Jetson Orin Nano</div>
+            <div class="tech-version">8GB 边缘设备</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics" style="margin-top: 20px;">
+      <div class="card-title">模型性能指标（测试集）</div>
+      <div class="card-desc">基于 979 张公开烟雾数据集训练，YOLOv8n 主干网络</div>
+      <div class="metrics-grid">
+        <div class="metric">
+          <div class="metric-value">0.979</div>
+          <div class="metric-label">烟雾 mAP@0.5</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">0.955</div>
+          <div class="metric-label">烟雾 Recall</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">2.6 ms</div>
+          <div class="metric-label">单帧推理延迟</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">1.4 GB</div>
+          <div class="metric-label">显存占用</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer>
+    <p>Dusc AI CV · 嵌入式 AI 视觉全流程开发平台</p>
+    <div>
+      <span class="tag">数据管理</span>
+      <span class="tag">模型训练</span>
+      <span class="tag">推理验证</span>
+      <span class="tag">Jetson 部署</span>
+      <span class="tag">PyQt5 桌面端</span>
+    </div>
+    <p style="margin-top: 16px; font-size: 12px;">Generated by TRAE · 2026-07</p>
+  </footer>
+
+</div>
+</body>
+</html>
